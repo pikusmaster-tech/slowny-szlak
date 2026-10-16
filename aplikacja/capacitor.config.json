@@ -1,0 +1,15 @@
+{
+  "appId": "pl.slownyszlak.gra",
+  "appName": "Słowny Szlak",
+  "webDir": "../www",
+  "android": {
+    "backgroundColor": "#101b45"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#101b45",
+      "showSpinner": false
+    }
+  }
+}

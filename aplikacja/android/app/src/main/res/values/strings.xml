@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Słowny Szlak</string>
+    <string name="title_activity_main">Słowny Szlak</string>
+    <string name="package_name">pl.slownyszlak.gra</string>
+    <string name="custom_url_scheme">pl.slownyszlak.gra</string>
+</resources>

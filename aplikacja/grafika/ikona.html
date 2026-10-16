@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face { font-family: N; src: url('../../www/fonts/nunito-latin-ext-wght-normal.woff2'); font-weight: 200 1000; unicode-range: U+0100-02AF; }
+@font-face { font-family: N; src: url('../../www/fonts/nunito-latin-wght-normal.woff2'); font-weight: 200 1000; unicode-range: U+0000-00FF; }
+body { margin: 0; } svg { display: block; }
+text { font-family: N; font-weight: 1000; }
+</style>
+<body>
+<script>
+const tryb = location.hash.slice(1); // tlo | przod | calosc | splash
+const W = tryb === 'splash' ? 2732 : 1024;
+const tlo = `
+  <defs>
+    <linearGradient id="n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1a5e"/><stop offset=".55" stop-color="#b0477a"/><stop offset="1" stop-color="#ffb27a"/></linearGradient>
+    <radialGradient id="s"><stop offset="0" stop-color="#ffe9b5"/><stop offset=".22" stop-color="#ffd9a0"/><stop offset=".25" stop-color="#ffd9a0" stop-opacity=".35"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#n)"/>
+  <circle cx="720" cy="560" r="420" fill="url(#s)"/>
+  <path d="M0 700 L120 560 L210 640 L330 470 L450 610 L560 520 L680 640 L800 500 L920 600 L1024 540 V1024 H0Z" fill="#6b3a78"/>
+  <path d="M0 800 L150 690 L260 760 L400 650 L520 760 L650 680 L780 780 L900 700 L1024 760 V1024 H0Z" fill="#43275f"/>
+  <path d="M0 900 L180 820 L330 880 L500 810 L680 890 L840 830 L1024 880 V1024 H0Z" fill="#1c0f2e"/>`;
+const przod = `
+  <g transform="translate(512 500) rotate(-6)">
+    <rect x="-190" y="-178" width="380" height="380" rx="80" fill="#d9a441"/>
+    <rect x="-190" y="-200" width="380" height="380" rx="80" fill="#fff8ea"/>
+    <text x="0" y="112" text-anchor="middle" font-size="330" fill="#2a2350">S</text>
+  </g>
+  <g transform="translate(700 660) rotate(10)">
+    <rect x="-92" y="-82" width="184" height="184" rx="42" fill="#c76f00"/>
+    <rect x="-92" y="-96" width="184" height="184" rx="42" fill="#ffb02e"/>
+    <text x="0" y="56" text-anchor="middle" font-size="160" fill="#fff">Ł</text>
+  </g>`;
+let svg;
+if (tryb === 'tlo') svg = `<svg width="1024" height="1024" viewBox="0 0 1024 1024">${tlo}</svg>`;
+else if (tryb === 'przod') svg = `<svg width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(512 512) scale(.62) translate(-512 -512)">${przod}</g></svg>`;
+else if (tryb === 'calosc') svg = `<svg width="1024" height="1024" viewBox="0 0 1024 1024">${tlo}${przod}</svg>`;
+else svg = `<svg width="2732" height="2732" viewBox="0 0 2732 2732"><rect width="2732" height="2732" fill="#101b45"/><g transform="translate(1366 1366) scale(.9) translate(-512 -512)">${przod}</g></svg>`;
+document.body.innerHTML = svg;
+document.body.style.width = W + 'px';
+</script>

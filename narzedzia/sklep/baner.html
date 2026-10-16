@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face { font-family: N; src: url('../../www/fonts/nunito-latin-ext-wght-normal.woff2'); font-weight: 200 1000; unicode-range: U+0100-02AF; }
+@font-face { font-family: N; src: url('../../www/fonts/nunito-latin-wght-normal.woff2'); font-weight: 200 1000; unicode-range: U+0000-00FF; }
+html, body { margin: 0; width: 1024px; height: 500px; overflow: hidden; font-family: N; position: relative; }
+#tlo { position: absolute; inset: 0; } #tlo svg { width: 100%; height: 100%; }
+.logo { position: absolute; left: 0; right: 0; top: 120px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.w { display: flex; gap: 8px; }
+.k { width: 74px; height: 74px; border-radius: 16px; background: linear-gradient(160deg, #fff, #ffe9b8); color: #2a2350; display: grid; place-items: center; font-weight: 1000; font-size: 48px; box-shadow: 0 6px 0 #d9a441, 0 14px 30px rgba(0,0,0,.35); }
+.k.d { background: linear-gradient(160deg, #ffd166, #ff9f1c); color: #fff; box-shadow: 0 6px 0 #c76f00, 0 14px 30px rgba(0,0,0,.35); }
+p { position: absolute; bottom: 52px; left: 0; right: 0; text-align: center; color: #fff; font-size: 34px; font-weight: 900; margin: 0; text-shadow: 0 3px 12px rgba(0,0,0,.6); }
+</style>
+<body><div id="tlo"></div>
+<div class="logo"><div class="w" id="w1"></div><div class="w" id="w2"></div></div>
+<p>Polska gra słowna · krzyżówki z liter</p>
+<script type="module">
+import { rysujKrajobraz, etapDlaPoziomu } from '../../www/js/krajobraz.js';
+document.getElementById('tlo').innerHTML = rysujKrajobraz(etapDlaPoziomu(21), 2).replace('xMidYMax slice', 'xMidYMid slice');
+for (const [id, s, d] of [['w1', 'SŁOWNY', ''], ['w2', 'SZLAK', ' d']]) document.getElementById(id).innerHTML = [...s].map((l) => `<div class="k${d}">${l}</div>`).join('');
+</script>

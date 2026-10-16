@@ -1,0 +1,36 @@
+name: Strona (wersja w przeglądarce i polityka prywatności)
+
+on:
+  push:
+    branches: [main]
+    paths: ['www/**', 'strona/**', '.github/workflows/strona.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  strona:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.wdrozenie.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Złożenie strony
+        run: |
+          mkdir -p _strona
+          cp -r www/. _strona/
+          cp strona/* _strona/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _strona
+      - id: wdrozenie
+        uses: actions/deploy-pages@v4
