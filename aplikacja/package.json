@@ -12,10 +12,11 @@
     "@capacitor/app": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/haptics": "^8.0.0",
-    "@capacitor/splash-screen": "^8.0.0"
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capgo/native-purchases": "8.9.6"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0",
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0"
   }
 }

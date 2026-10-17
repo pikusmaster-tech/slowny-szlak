@@ -14,6 +14,10 @@ export const KONFIG = {
   nagrodaZaReklame: 30,
   kosztPodpowiedzi: 40,
   kosztSlowa: 120,
+  // Podpowiedzi: pierwsze tyle dziennie za monety, kolejne tylko po reklamie z nagrodą. Po zakupie bez limitu i za darmo.
+  podpowiedziZaMonetyDziennie: 3,
+  // Produkty w Google Play (muszą mieć takie same identyfikatory w Play Console).
+  produkty: { bezReklam: 'usun_reklamy' },
   nagrodaZaPoziom: 6,
   nagrodaZaSloik: 30,
   bonusowDoSloika: 8,

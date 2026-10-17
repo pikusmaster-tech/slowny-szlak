@@ -7,6 +7,7 @@ import { wybuch, konfetti, lot } from './efekty.js';
 import { startReklam, mozePelnoekranowa, nagradzana, ustawieniaPrywatnosci } from './reklamy.js';
 import { KONFIG } from './konfiguracja.js';
 import { natywna, wtyczka } from './natywne.js';
+import { zakupyDostepne, cenaBezReklam, sprawdzZakupy, kupBezReklam, przywrocZakup } from './zakupy.js';
 
 const $ = (s) => document.querySelector(s);
 const DUZE = (s) => s.toLocaleUpperCase('pl');
@@ -164,7 +165,7 @@ function wczytajPoziom(tryb) {
   kolo.ustaw(dane.l);
   odswiezSloik();
   odswiezMonety();
-  $('#koszt-podp').textContent = KONFIG.kosztPodpowiedzi;
+  odswiezPodpowiedz();
   $('#film-nagroda').textContent = '+' + KONFIG.nagrodaZaReklame;
   if (tryb !== 'dzienna' && nr === 1 && !zapis.znalezione.length) raczkaCzas = setTimeout(pokazRaczke, 900);
   if (tryb === 'dzienna' && zapis.ukonczona) {
@@ -318,26 +319,65 @@ function odswiezSloik() {
   $('#sloik-wyp').style.height = `${(S.sloik / KONFIG.bonusowDoSloika) * 40}%`;
 }
 
-function podpowiedz() {
-  if (!biezacy || biezacy.koniec) return;
-  if (S.monety < KONFIG.kosztPodpowiedzi) { zaMalo(); return; }
+// Odkrywamy pierwszą brakującą literę najkrótszego nieznalezionego słowa.
+function nastepnaPodpowiedz() {
   const z = biezacy.zapis;
-  // Odkrywamy pierwszą brakującą literę najkrótszego nieznalezionego słowa.
   const brak = biezacy.slowa.map((s, idx) => ({ s, idx })).filter(({ s }) => !z.znalezione.includes(s.s)).sort((a, b) => a.s.s.length - b.s.s.length);
   for (const { idx } of brak) {
     const c = kratkiSlowa(idx).find((k) => !z.odkryte.includes(k.x + ',' + k.y));
-    if (!c) continue;
-    S.monety -= KONFIG.kosztPodpowiedzi;
-    odswiezMonety(true);
-    odkryjKratke(c, { podpowiedz: true });
-    Dzwiek.podpowiedz(); wibruj(14);
-    const r = c.el.getBoundingClientRect();
-    wybuch(r.left + r.width / 2, r.top + r.height / 2, { ile: 12, kolory: ['#b9e3ff', '#fff', '#7cc6ff'] });
-    sprawdzKompletne();
-    zapisz();
-    sprawdzWygrana(600);
-    return;
+    if (c) return c;
   }
+  return null;
+}
+
+function podpowiedziDzis() {
+  if (S.podpowiedziDzis?.data !== dzisiaj()) S.podpowiedziDzis = { data: dzisiaj(), ile: 0 };
+  return S.podpowiedziDzis;
+}
+
+// Po zakupie podpowiedzi są za darmo i bez limitu. Bez zakupu: kilka dziennie za monety, potem tylko z reklamą.
+function trybPodpowiedzi() {
+  if (S.bezReklam) return 'darmo';
+  return podpowiedziDzis().ile < KONFIG.podpowiedziZaMonetyDziennie ? 'monety' : 'reklama';
+}
+
+function odswiezPodpowiedz() {
+  const tryb = trybPodpowiedzi();
+  const znaczek = $('#koszt-podp');
+  znaczek.style.display = tryb === 'darmo' ? 'none' : '';
+  znaczek.textContent = tryb === 'monety' ? KONFIG.kosztPodpowiedzi : '▶';
+  $('#btn-podpowiedz').setAttribute('aria-label', tryb === 'reklama' ? 'Podpowiedź za reklamę' : 'Podpowiedź');
+}
+
+let podpowiedzWToku = false;
+async function podpowiedz() {
+  if (!biezacy || biezacy.koniec || podpowiedzWToku) return;
+  const poziom = biezacy;
+  if (!nastepnaPodpowiedz()) return;
+  const tryb = trybPodpowiedzi();
+  if (tryb === 'monety' && S.monety < KONFIG.kosztPodpowiedzi) { zaMalo(); return; }
+  if (tryb === 'reklama') {
+    podpowiedzWToku = true;
+    const ok = await nagradzana();
+    podpowiedzWToku = false;
+    if (biezacy !== poziom || poziom.koniec) return;
+    if (!ok) { komunikat('Reklama niedostępna'); return; }
+  }
+  const c = nastepnaPodpowiedz();
+  if (!c) return;
+  if (tryb === 'monety') {
+    S.monety -= KONFIG.kosztPodpowiedzi;
+    podpowiedziDzis().ile++;
+    odswiezMonety(true);
+  }
+  odkryjKratke(c, { podpowiedz: true });
+  Dzwiek.podpowiedz(); wibruj(14);
+  const r = c.el.getBoundingClientRect();
+  wybuch(r.left + r.width / 2, r.top + r.height / 2, { ile: 12, kolory: ['#b9e3ff', '#fff', '#7cc6ff'] });
+  sprawdzKompletne();
+  zapisz();
+  sprawdzWygrana(600);
+  odswiezPodpowiedz();
 }
 
 function zaMalo() {
@@ -503,11 +543,15 @@ function podepnij() {
     $('#u-polityka').href = KONFIG.politykaPrywatnosci;
     $('#u-wersja').textContent = 'Wersja ' + KONFIG.wersja + '.';
     $('#u-prywatnosc-reklam').style.display = natywna() ? '' : 'none';
+    $('#u-zakupy-info').hidden = true;
+    odswiezZakupy();
     otworz('#ustawienia');
   };
   $('#u-dzwiek').onchange = (e) => { S.dzwiek = e.target.checked; zapisz(); };
   $('#u-wibracje').onchange = (e) => { S.wibracje = e.target.checked; zapisz(); };
   $('#u-prywatnosc-reklam').onclick = ustawieniaPrywatnosci;
+  $('#u-bez-reklam').onclick = kupTeraz;
+  $('#u-przywroc').onclick = przywrocTeraz;
   $('#u-zamknij').onclick = () => zamknij('#ustawienia');
   // Przycisk "wstecz" na Androidzie
   wtyczka('App')?.addListener('backButton', () => {
@@ -518,6 +562,50 @@ function podepnij() {
     else if (biezacy) wyjdzZPoziomu();
     else wtyczka('App').exitApp();
   });
+}
+
+// ---------- Zakupy ----------
+function pokazInfoZakupu(tekst) {
+  const el = $('#u-zakupy-info');
+  el.textContent = tekst;
+  el.hidden = !tekst;
+}
+
+// Przycisk „Usuń reklamy” pokazujemy dopiero, gdy Google Play zna produkt i podaje cenę.
+async function odswiezZakupy() {
+  const kup = $('#u-bez-reklam');
+  const dostepne = zakupyDostepne();
+  $('#u-przywroc').hidden = !dostepne || S.bezReklam;
+  kup.hidden = true;
+  if (!dostepne) { pokazInfoZakupu(''); return; }
+  if (S.bezReklam) { pokazInfoZakupu('Reklamy są usunięte. Dziękujemy!'); return; }
+  pokazInfoZakupu('');
+  const cena = await cenaBezReklam();
+  if (!cena) return;
+  kup.textContent = `Usuń reklamy · ${cena}`;
+  kup.hidden = false;
+}
+
+async function kupTeraz() {
+  const kup = $('#u-bez-reklam');
+  kup.disabled = true;
+  const wynik = await kupBezReklam();
+  kup.disabled = false;
+  const tekst = {
+    ok: 'Dziękujemy! Reklamy usunięte, a podpowiedzi są bez limitu.',
+    oczekuje: 'Zakup czeka na potwierdzenie w Google Play.',
+    blad: 'Zakup nie został dokończony. Spróbuj ponownie.',
+  }[wynik];
+  await odswiezZakupy();
+  pokazInfoZakupu(tekst);
+  odswiezPodpowiedz();
+}
+
+async function przywrocTeraz() {
+  const ok = await przywrocZakup();
+  await odswiezZakupy();
+  pokazInfoZakupu(ok ? 'Zakup przywrócony. Reklamy są usunięte.' : 'Nie znaleziono zakupu na tym koncie Google.');
+  odswiezPodpowiedz();
 }
 
 function wyjdzZPoziomu() {
@@ -536,5 +624,6 @@ async function main() {
     wtyczka('SplashScreen')?.hide();
   }
   startReklam();
+  sprawdzZakupy().then(odswiezPodpowiedz);
 }
 main();

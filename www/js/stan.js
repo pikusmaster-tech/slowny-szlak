@@ -11,7 +11,8 @@ const DOMYSLNY = {
   seria: 0,
   ostatniaDzienna: null,
   dzienna: null, // postęp wyzwania dnia
-  bezReklam: false,
+  bezReklam: false, // zakup „usuń reklamy”; potwierdzany w Google Play przy każdym uruchomieniu
+  podpowiedziDzis: null, // { data, ile } podpowiedzi za monety w danym dniu
   odOstatniejReklamy: 0,
   znalezioneBonusy: 0,
   slowWszystkich: 0,
