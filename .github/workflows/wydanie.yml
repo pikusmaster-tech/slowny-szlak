@@ -10,6 +10,10 @@ on:
         description: 'Zaktualizować też opis i zrzuty w sklepie?'
         type: boolean
         default: false
+      szkic:
+        description: 'Wydanie jako szkic (konieczne, dopóki aplikacja nie jest opublikowana w sklepie)'
+        type: boolean
+        default: true
   push:
     tags: ['v*']
 
@@ -44,4 +48,9 @@ jobs:
       - name: Wysyłka do Google Play
         env:
           PLAY_KONTO: ${{ secrets.PLAY_KONTO }}
-        run: node narzedzia/publikuj.mjs aplikacja/android/app/build/outputs/bundle/release/app-release.aab "${{ inputs.sciezka || 'internal' }}" ${{ inputs.sklep && '--sklep' || '' }}
+        # Wydanie po tagu idzie jako szkic, dopóki zmienna repozytorium PLAY_SZKIC nie zostanie ustawiona na 'false'.
+        run: >
+          node narzedzia/publikuj.mjs aplikacja/android/app/build/outputs/bundle/release/app-release.aab
+          "${{ inputs.sciezka || 'internal' }}"
+          ${{ inputs.sklep && '--sklep' || '' }}
+          ${{ ((github.event_name == 'workflow_dispatch' && inputs.szkic) || (github.event_name == 'push' && vars.PLAY_SZKIC != 'false')) && '--szkic' || '' }}

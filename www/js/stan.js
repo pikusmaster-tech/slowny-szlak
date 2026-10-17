@@ -25,11 +25,11 @@ export const S = stan;
 export function zapisz() {
   try { localStorage.setItem(KLUCZ, JSON.stringify(stan)); } catch { /* tryb prywatny: gramy bez zapisu */ }
 }
-export function dzisiaj() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const format = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export function dzisiaj() { return format(new Date()); }
+// Dzień wcześniej liczony z pól kalendarza, a nie "minus 24 godziny", więc zmiana czasu nie psuje serii.
+export function dzienPrzed(data) {
+  const [y, m, d] = data.split('-').map(Number);
+  return format(new Date(y, m - 1, d - 1));
 }
-export function wczoraj() {
-  const d = new Date(Date.now() - 864e5);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+export function wczoraj() { return dzienPrzed(dzisiaj()); }

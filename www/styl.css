@@ -13,8 +13,9 @@
   --zielony: #3ddc97;
   --kratka: rgba(255, 255, 255, 0.9);
   --kratka-pusta: rgba(255, 255, 255, 0.16);
-  --gora: env(safe-area-inset-top, 0px);
-  --dol: env(safe-area-inset-bottom, 0px);
+  /* Capacitor 8 podaje marginesy systemowe także jako zmienne CSS (starsze WebView nie znają env()). */
+  --gora: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --dol: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -137,7 +138,7 @@ svg { width: 100%; height: 100%; display: block; }
   animation: wskok .5s cubic-bezier(.2, 1.6, .4, 1) backwards; pointer-events: none; }
 .litera.wybrana { background: linear-gradient(160deg, #ffd34d, #ff9f1c); color: #fff; transform: scale(1.12); box-shadow: 0 4px 0 #c76f00, 0 0 24px rgba(255,190,60,.8); text-shadow: 0 2px 0 rgba(0,0,0,.2); }
 
-.raczka { position: fixed; z-index: 6; width: 54px; height: 54px; pointer-events: none; opacity: 0; font-size: 46px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.4)); }
+.raczka { position: fixed; left: 0; top: 0; z-index: 6; width: 54px; height: 54px; pointer-events: none; opacity: 0; font-size: 46px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.4)); }
 .raczka.pokaz { opacity: 1; }
 .raczka::before { content: '👆'; }
 
@@ -194,4 +195,20 @@ svg { width: 100%; height: 100%; display: block; }
   .kolo { max-width: 250px; }
   .logo { margin-top: 1vh; }
 }
+/* Telefon trzymany poziomo (wersja w przeglądarce): krzyżówka po lewej, koło po prawej. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .ekran { max-width: none; }
+  #ekran-gra { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, calc(100vh - 70px)); grid-template-rows: auto minmax(0, 1fr) auto auto; column-gap: 18px; }
+  #ekran-gra .pasek { grid-column: 1 / -1; }
+  #ekran-gra .obszar-siatki { grid-column: 1; grid-row: 2 / 5; margin: 4px 0; }
+  #ekran-gra .podglad { grid-column: 2; grid-row: 2; align-self: end; height: 40px; }
+  #ekran-gra .strefa-kola { grid-column: 2; grid-row: 3 / 5; grid-template-columns: 48px 1fr 48px; }
+  #ekran-gra .kolo { max-width: calc(100vh - 150px); }
+  #ekran-gra .okragly { width: 46px; height: 46px; padding: 10px; }
+  #ekran-start { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; column-gap: 24px; align-items: center; }
+  #ekran-start .pasek { grid-column: 1 / -1; }
+  #ekran-start .logo { margin-top: 0; }
+  #ekran-start .logo-kafel { width: 40px; height: 40px; font-size: 24px; }
+}
+
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01s !important; transition-duration: .01s !important; } }

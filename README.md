@@ -17,6 +17,11 @@ Zarabia na reklamach Google AdMob (pełnoekranowe co kilka poziomów i z nagrod�
 
 ## Wydanie
 
+Pierwszy pakiet nowej aplikacji Google przyjmuje tylko ręcznie: pobierz artefakt `slowny-szlak-aab`
+z pierwszego przebiegu akcji i wgraj go w Play Console. Dopóki aplikacja nie jest opublikowana,
+API przyjmuje tylko szkice, dlatego akcja domyślnie wysyła wydanie jako szkic
+(po tagu: do czasu ustawienia zmiennej repozytorium `PLAY_SZKIC` na `false`).
+
 Akcja „Wydanie na Google Play” (ręcznie lub po tagu `v*`) buduje AAB i wysyła go do wybranej ścieżki.
 Sekrety repozytorium: `KLUCZ_BASE64`, `KLUCZ_HASLO`, `PLAY_KONTO`.
 Zmienne repozytorium: `ADMOB_APP_ID`, `ADMOB_PELNOEKRANOWA`, `ADMOB_NAGRODZONA` (bez nich gra używa testowych reklam).

@@ -1,5 +1,5 @@
 // Słowny Szlak: główna logika gry.
-import { S, zapisz, dzisiaj, wczoraj } from './stan.js';
+import { S, zapisz, dzisiaj, wczoraj, dzienPrzed } from './stan.js';
 import { Kolo } from './kolo.js';
 import { rysujKrajobraz, etapDlaPoziomu, SZLAKI, PORY } from './krajobraz.js';
 import { Dzwiek, wibruj } from './dzwiek.js';
@@ -30,6 +30,8 @@ let DANE = null; // { slownik, poziomy }
 let kolo;
 let biezacy = null; // stan aktualnego poziomu
 let warstwaTla = 0, tloKlucz = null;
+let oczekujace = 0; // monety już zapisane w stanie, które jeszcze lecą do licznika
+let raczkaCzas = null, raczkaKlatka = null;
 
 // ---------- Tło ----------
 function ustawTlo(etap, ziarno) {
@@ -47,11 +49,22 @@ function ustawTlo(etap, ziarno) {
 // ---------- Monety ----------
 function odswiezMonety(animuj) {
   document.querySelectorAll('[data-monety]').forEach((el) => {
-    el.querySelector('span').textContent = S.monety;
+    el.querySelector('span').textContent = Math.max(0, S.monety - oczekujace);
     if (animuj) { el.classList.remove('puls'); void el.offsetWidth; el.classList.add('puls'); }
   });
 }
+// Monety trafiają do zapisu od razu, żeby nie przepadły przy zamknięciu gry; animacja dolicza je tylko na ekranie.
+function przyznajMonety(ile) {
+  S.monety += ile; oczekujace += ile; zapisz();
+}
+function porzucAnimacje(ile) {
+  oczekujace = Math.max(0, oczekujace - ile); odswiezMonety();
+}
 function dodajMonety(ile, z) {
+  przyznajMonety(ile);
+  animujMonety(ile, z);
+}
+function animujMonety(ile, z) {
   const cel = document.querySelector('.ekran.aktywny [data-monety]') || document.querySelector('[data-monety]');
   const ileMonet = Math.min(10, Math.max(3, Math.round(ile / 5)));
   const start = z || { x: innerWidth / 2, y: innerHeight / 2 };
@@ -61,7 +74,7 @@ function dodajMonety(ile, z) {
       opoznienie: i * 70, czas: 650,
       gotowe: () => {
         const porcja = i === ileMonet - 1 ? ile - doliczone : Math.floor(ile / ileMonet);
-        doliczone += porcja; S.monety += porcja; zapisz(); odswiezMonety(true); Dzwiek.moneta();
+        doliczone += porcja; oczekujace = Math.max(0, oczekujace - porcja); odswiezMonety(true); Dzwiek.moneta();
       },
     });
   }
@@ -92,6 +105,8 @@ function logo() {
 }
 
 function ekranStartowy() {
+  zatrzymajRaczke();
+  document.querySelectorAll('.nakladka.otwarta').forEach((n) => n.classList.remove('otwarta'));
   const etap = etapDlaPoziomu(S.poziom);
   ustawTlo(etap, etap.nr + 1);
   $('#graj-poziom').textContent = `Poziom ${S.poziom}`;
@@ -112,6 +127,7 @@ function hashDaty(d) { let h = 2166136261; for (const c of d) { h ^= c.charCodeA
 function wczytajPoziom(tryb) {
   if (!DANE) return;
   document.querySelectorAll('.nakladka.otwarta').forEach((n) => n.classList.remove('otwarta'));
+  zatrzymajRaczke();
   kolo.wylaczone = false;
   let nr, dane, etap, ziarno, zapis;
   if (tryb === 'dzienna') {
@@ -132,12 +148,17 @@ function wczytajPoziom(tryb) {
     ziarno = etap.nr + 1;
     if (!S.postep || S.postep.poziom !== nr) S.postep = { poziom: nr, znalezione: [], odkryte: [], bonusy: [] };
     zapis = S.postep;
+    // Poziom rozwiązany, ale nie zaliczony (np. stary zapis): zaliczamy i przechodzimy dalej.
+    if (zapis.znalezione.length >= dane.w.length) {
+      S.poziom = nr + 1; S.postep = null; zapisz();
+      return wczytajPoziom('kampania');
+    }
   }
   zapisz();
   biezacy = { tryb, nr, dane, etap, zapis, kratki: new Map(), slowa: dane.w, bonusy: new Set(dane.b.map((i) => DANE.slownik[i])), seria: 0, ostatnie: 0, koniec: false };
   ustawTlo(etap, ziarno);
   $('#tytul-szlaku').textContent = tryb === 'dzienna' ? 'Wyzwanie dnia' : etap.szlak.nazwa;
-  $('#tytul-nr').textContent = tryb === 'dzienna' ? new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) : `Poziom ${nr} · ${etap.wEtapie}/20`;
+  $('#tytul-nr').textContent = tryb === 'dzienna' ? dataPolska(zapis.data) : `Poziom ${nr} · ${etap.wEtapie}/20`;
   pokazEkran('ekran-gra');
   rysujSiatke();
   kolo.ustaw(dane.l);
@@ -145,7 +166,16 @@ function wczytajPoziom(tryb) {
   odswiezMonety();
   $('#koszt-podp').textContent = KONFIG.kosztPodpowiedzi;
   $('#film-nagroda').textContent = '+' + KONFIG.nagrodaZaReklame;
-  if (tryb !== 'dzienna' && nr === 1 && !zapis.znalezione.length) setTimeout(pokazRaczke, 900);
+  if (tryb !== 'dzienna' && nr === 1 && !zapis.znalezione.length) raczkaCzas = setTimeout(pokazRaczke, 900);
+  if (tryb === 'dzienna' && zapis.ukonczona) {
+    biezacy.koniec = true; kolo.wylaczone = true;
+    setTimeout(() => komunikat('Wróć jutro po nowe!'), 500);
+  }
+}
+
+function dataPolska(d) {
+  const [y, m, dz] = d.split('-').map(Number);
+  return new Date(y, m - 1, dz).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' });
 }
 
 function rysujSiatke() {
@@ -176,7 +206,9 @@ function rysujSiatke() {
 
 function dopasujSiatke() {
   if (!biezacy) return;
-  const obszar = $('.obszar-siatki').getBoundingClientRect();
+  // clientWidth/clientHeight ignorują animowane skalowanie ekranu przy wejściu.
+  const o = $('.obszar-siatki');
+  const obszar = { width: o.clientWidth, height: o.clientHeight };
   const { W, H } = biezacy.dane;
   const odstep = 5;
   const rozm = Math.max(18, Math.min(62, Math.floor((obszar.width - odstep * (W - 1)) / W), Math.floor((obszar.height - odstep * (H - 1)) / H)));
@@ -228,6 +260,7 @@ function podglad(slowo, klasa) {
     el.innerHTML = [...slowo].map((l) => `<span class="pl">${DUZE(l)}</span>`).join('');
     return;
   }
+  el.innerHTML = [...slowo].map((l) => `<span class="pl">${DUZE(l)}</span>`).join('');
   el.className = 'podglad ' + klasa;
   setTimeout(() => { if (el.classList.contains(klasa)) el.classList.add('znika'); }, klasa === 'zle' ? 420 : 250);
   setTimeout(() => { if (el.classList.contains(klasa)) { el.innerHTML = ''; el.className = 'podglad'; } }, 700);
@@ -254,7 +287,7 @@ function naSlowo(slowo) {
     biezacy.seria = teraz - biezacy.ostatnie < 6000 ? biezacy.seria + 1 : 0;
     biezacy.ostatnie = teraz;
     if (biezacy.seria >= 1 || slowo.length >= 6) komunikat(POCHWALY[Math.min(biezacy.seria + (slowo.length >= 6 ? 1 : 0), POCHWALY.length - 1)]);
-    if (z.znalezione.length >= biezacy.slowa.length) setTimeout(wygrana, kratki.length * 70 + 450);
+    sprawdzWygrana(kratki.length * 70 + 450);
   } else if (idx >= 0) {
     kratkiSlowa(idx).forEach((c) => { c.el.classList.remove('juz'); void c.el.offsetWidth; c.el.classList.add('juz'); });
     podglad(slowo, 'zle');
@@ -269,7 +302,8 @@ function naSlowo(slowo) {
     if (S.sloik >= KONFIG.bonusowDoSloika) {
       S.sloik -= KONFIG.bonusowDoSloika;
       const b = $('#btn-sloik').getBoundingClientRect();
-      setTimeout(() => { komunikat('Pełny słoik!'); dodajMonety(KONFIG.nagrodaZaSloik, { x: b.left + b.width / 2, y: b.top }); }, 650);
+      przyznajMonety(KONFIG.nagrodaZaSloik);
+      setTimeout(() => { komunikat('Pełny słoik!'); animujMonety(KONFIG.nagrodaZaSloik, { x: b.left + b.width / 2, y: b.top }); }, 650);
     }
     zapisz();
   } else if (biezacy.bonusy.has(slowo)) {
@@ -301,7 +335,7 @@ function podpowiedz() {
     wybuch(r.left + r.width / 2, r.top + r.height / 2, { ile: 12, kolory: ['#b9e3ff', '#fff', '#7cc6ff'] });
     sprawdzKompletne();
     zapisz();
-    if (z.znalezione.length >= biezacy.slowa.length) setTimeout(wygrana, 600);
+    sprawdzWygrana(600);
     return;
   }
 }
@@ -323,40 +357,68 @@ async function film() {
 }
 
 // ---------- Wygrana ----------
-function wygrana() {
-  if (biezacy.koniec) return;
+// Ukończenie zapisujemy od razu po ostatnim słowie; z opóźnieniem pokazujemy tylko świętowanie.
+// Dzięki temu wyjście z poziomu albo zamknięcie gry w tej chwili niczego nie psuje.
+function sprawdzWygrana(opoznienie) {
+  if (!biezacy || biezacy.koniec || biezacy.zapis.znalezione.length < biezacy.slowa.length) return;
+  const nagroda = zapiszUkonczenie();
+  const poziom = biezacy;
+  setTimeout(() => {
+    if (biezacy === poziom) swietuj(poziom, nagroda);
+    else porzucAnimacje(nagroda);
+  }, opoznienie);
+}
+
+function zapiszUkonczenie() {
   biezacy.koniec = true;
   kolo.wylaczone = true;
-  Dzwiek.wygrana(); wibruj(40);
-  konfetti();
-  const { tryb, nr, etap } = biezacy;
-  let nagroda = KONFIG.nagrodaZaPoziom + Math.floor(biezacy.slowa.length / 2);
+  const { tryb, nr, zapis } = biezacy;
+  let nagroda;
   if (tryb === 'dzienna') {
     nagroda = 50;
-    S.seria = S.ostatniaDzienna === wczoraj() ? S.seria + 1 : S.ostatniaDzienna === dzisiaj() ? S.seria : 1;
-    S.ostatniaDzienna = dzisiaj();
+    // Seria liczy się według daty łamigłówki, nie zegara: rozwiązanie po północy wciąż zalicza wczorajszą.
+    if (S.ostatniaDzienna !== zapis.data) {
+      S.seria = S.ostatniaDzienna === dzienPrzed(zapis.data) ? S.seria + 1 : 1;
+      S.ostatniaDzienna = zapis.data;
+    }
+    zapis.ukonczona = true;
+  } else {
+    nagroda = KONFIG.nagrodaZaPoziom + Math.floor(biezacy.slowa.length / 2);
+    S.poziom = nr + 1;
+    S.postep = null;
+  }
+  przyznajMonety(nagroda);
+  return nagroda;
+}
+
+function swietuj(poziom, nagroda) {
+  Dzwiek.wygrana(); wibruj(40);
+  konfetti();
+  const { tryb, nr, etap } = poziom;
+  if (tryb === 'dzienna') {
     $('#wygrana-tytul').textContent = 'Wyzwanie ukończone!';
     $('#wygrana-opis').textContent = `Seria: ${S.seria} ${S.seria === 1 ? 'dzień' : 'dni'} z rzędu. Jutro czeka nowa krzyżówka.`;
     $('#wygrana-kropki').innerHTML = '';
   } else {
-    S.poziom = nr + 1;
-    S.postep = null;
     $('#wygrana-tytul').textContent = ['Brawo!', 'Super!', 'Pięknie!', 'Ekstra!', 'Wspaniale!'][nr % 5];
     $('#wygrana-opis').textContent = etap.wEtapie === 20 ? `Szlak ${etap.szlak.nazwa} ukończony!` : `${etap.szlak.nazwa}: poziom ${etap.wEtapie} z 20`;
     $('#wygrana-kropki').innerHTML = Array.from({ length: 20 }, (_, i) => `<i class="${i < etap.wEtapie - 1 ? 'z' : i === etap.wEtapie - 1 ? 'teraz' : ''}"></i>`).join('');
   }
-  zapisz();
   $('#wygrana-nagroda').innerHTML = `<span><svg><use href="#i-moneta"/></svg>+${nagroda}</span>`;
   setTimeout(() => {
+    if (biezacy !== poziom) return porzucAnimacje(nagroda);
     otworz('#wygrana');
     setTimeout(() => {
+      if (biezacy !== poziom) return porzucAnimacje(nagroda);
       const r = $('#wygrana-nagroda').getBoundingClientRect();
-      dodajMonety(nagroda, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      animujMonety(nagroda, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
     }, 700);
   }, 900);
 }
 
 async function dalej() {
+  if (!biezacy || !biezacy.koniec || biezacy.dalej) return;
+  biezacy.dalej = true;
   zamknij('#wygrana');
   const { tryb, nr, etap } = biezacy;
   kolo.wylaczone = false;
@@ -374,31 +436,41 @@ async function dalej() {
 }
 
 // ---------- Samouczek ----------
+function zatrzymajRaczke() {
+  clearTimeout(raczkaCzas); cancelAnimationFrame(raczkaKlatka);
+  raczkaCzas = raczkaKlatka = null;
+  $('#raczka').classList.remove('pokaz');
+}
+
 function pokazRaczke() {
+  zatrzymajRaczke();
   if (!biezacy || biezacy.nr !== 1 || biezacy.zapis.znalezione.length) return;
   const r = $('#raczka');
-  const cel = biezacy.slowa[0].s;
+  const poziom = biezacy;
   const uzyte = [];
-  const pkt = [...cel].map((l) => {
+  const indeksy = [...poziom.slowa[0].s].map((l) => {
     const i = kolo.litery.findIndex((x, j) => x === l && !uzyte.includes(j));
     uzyte.push(i);
-    const p = kolo.pozycje[i], b = kolo.el.getBoundingClientRect();
-    return [b.left + p[0], b.top + p[1]];
+    return i;
   });
   let t0 = null;
-  const dl = 900 * pkt.length;
+  const dl = 900 * indeksy.length;
   r.classList.add('pokaz');
   const krok = (t) => {
-    if (!biezacy || biezacy.zapis.znalezione.length || kolo.aktywne) { r.classList.remove('pokaz'); if (biezacy && !biezacy.zapis.znalezione.length) setTimeout(pokazRaczke, 4000); return; }
+    if (biezacy !== poziom || poziom.zapis.znalezione.length) { zatrzymajRaczke(); return; }
+    if (kolo.aktywne) { zatrzymajRaczke(); raczkaCzas = setTimeout(pokazRaczke, 4000); return; }
     t0 ??= t;
+    // Pozycje liczymy co klatkę, żeby rączka nadążała za tasowaniem i obrotem ekranu.
+    const b = kolo.el.getBoundingClientRect();
+    const pkt = indeksy.map((i) => [b.left + kolo.pozycje[i][0], b.top + kolo.pozycje[i][1]]);
     const p = ((t - t0) % (dl + 800)) / dl;
     const q = Math.min(p, 1) * (pkt.length - 1);
     const i = Math.min(Math.floor(q), pkt.length - 2), f = q - i;
     const x = pkt[i][0] + (pkt[i + 1][0] - pkt[i][0]) * f, y = pkt[i][1] + (pkt[i + 1][1] - pkt[i][1]) * f;
     r.style.transform = `translate(${x - 14}px, ${y - 6}px)`;
-    requestAnimationFrame(krok);
+    raczkaKlatka = requestAnimationFrame(krok);
   };
-  requestAnimationFrame(krok);
+  raczkaKlatka = requestAnimationFrame(krok);
   komunikat('Przeciągnij po literach');
 }
 
@@ -411,7 +483,7 @@ function podepnij() {
   });
   $('#btn-graj').onclick = () => { Dzwiek.odblokuj(); Dzwiek.klik(); wczytajPoziom('kampania'); };
   $('#btn-dzienna').onclick = () => { Dzwiek.odblokuj(); Dzwiek.klik(); wczytajPoziom('dzienna'); };
-  $('#btn-wstecz').onclick = () => { Dzwiek.klik(); biezacy = null; ekranStartowy(); };
+  $('#btn-wstecz').onclick = () => { Dzwiek.klik(); wyjdzZPoziomu(); };
   $('#btn-tasuj').onclick = () => { kolo.tasuj(); Dzwiek.tasuj(); wibruj(10); };
   $('#btn-podpowiedz').onclick = podpowiedz;
   $('#btn-film').onclick = film;
@@ -440,10 +512,17 @@ function podepnij() {
   // Przycisk "wstecz" na Androidzie
   wtyczka('App')?.addListener('backButton', () => {
     const otwarta = document.querySelector('.nakladka.otwarta');
-    if (otwarta && otwarta.id !== 'wygrana') otwarta.classList.remove('otwarta');
-    else if (biezacy) { biezacy = null; ekranStartowy(); }
+    if (otwarta?.id === 'wygrana') dalej();
+    else if (otwarta?.id === 'nowy-szlak') wyjdzZPoziomu();
+    else if (otwarta) otwarta.classList.remove('otwarta');
+    else if (biezacy) wyjdzZPoziomu();
     else wtyczka('App').exitApp();
   });
+}
+
+function wyjdzZPoziomu() {
+  biezacy = null;
+  ekranStartowy();
 }
 
 async function main() {

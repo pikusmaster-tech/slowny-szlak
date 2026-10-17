@@ -28,6 +28,10 @@ jobs:
           mkdir -p _strona
           cp -r www/. _strona/
           cp strona/* _strona/
+          # Polityka prywatności nie może trafić do sieci z pustymi polami.
+          if grep -q '__KONTAKT__\|__TWORCA__' _strona/prywatnosc.html; then
+            echo "Uzupełnij dane kontaktowe w strona/prywatnosc.html"; exit 1
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

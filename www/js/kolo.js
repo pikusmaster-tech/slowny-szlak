@@ -38,7 +38,8 @@ export class Kolo {
   }
 
   uloz() {
-    const r = this.el.getBoundingClientRect();
+    // clientWidth ignoruje transformacje (ekran wjeżdża ze skalą 1.03), getBoundingClientRect nie.
+    const r = { width: this.el.clientWidth, height: this.el.clientHeight };
     this.rozmiar = r.width;
     const n = this.litery.length;
     const promien = r.width * (n <= 3 ? 0.27 : n <= 5 ? 0.31 : 0.33);
@@ -72,7 +73,8 @@ export class Kolo {
 
   punkt(e) {
     const r = this.el.getBoundingClientRect();
-    return [e.clientX - r.left, e.clientY - r.top];
+    const skala = r.width / (this.el.clientWidth || r.width);
+    return [(e.clientX - r.left) / skala, (e.clientY - r.top) / skala];
   }
 
   traf(p, prog) {
@@ -85,13 +87,16 @@ export class Kolo {
   }
 
   start(e) {
-    if (this.wylaczone) return;
+    // Śledzimy tylko jeden palec: drugi dotyk w trakcie przeciągania jest ignorowany.
+    if (this.wylaczone || this.aktywne) return;
     const p = this.punkt(e);
     const i = this.traf(p, 1.15);
     if (i < 0) return;
     e.preventDefault();
     this.el.setPointerCapture?.(e.pointerId);
+    this.palec = e.pointerId;
     this.aktywne = true;
+    this.wybrane.forEach((j) => this.przyciski[j].classList.remove('wybrana'));
     this.wybrane = [];
     this.dodaj(i);
     this.kursor = p;
@@ -99,7 +104,7 @@ export class Kolo {
   }
 
   ruch(e) {
-    if (!this.aktywne) return;
+    if (!this.aktywne || e.pointerId !== this.palec) return;
     const p = this.punkt(e);
     this.kursor = p;
     const i = this.traf(p, 0.8);
@@ -111,16 +116,17 @@ export class Kolo {
     this.rysuj();
   }
 
-  koniec() {
-    if (!this.aktywne) return;
+  koniec(e) {
+    if (!this.aktywne || e.pointerId !== this.palec) return;
     this.aktywne = false;
     const slowo = this.slowo();
     this.wybrane.forEach((i) => this.przyciski[i].classList.remove('wybrana'));
     this.wybrane = [];
     this.kursor = null;
     this.rysuj();
-    this.cb.naZmiane?.('');
+    // Słowo zostaje na podglądzie, żeby gra mogła je pokolorować (dobre, złe, bonus).
     if (slowo.length >= 2) this.cb.naSlowo?.(slowo);
+    else this.cb.naZmiane?.('');
   }
 
   dodaj(i) {

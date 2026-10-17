@@ -11,11 +11,17 @@ const LICZBA = Number(nArg || 2000);
 const LITERY = /^[aąbcćdeęfghijklłmnńoóprsśtuwyzźż]+$/;
 
 // Słowa, których nie chcemy w grze (rdzenie wulgaryzmów i obraźliwych słów).
-const ZAKAZANE = ['kurw', 'chuj', 'huj', 'pierd', 'jeb', 'pizd', 'cip', 'kutas', 'fiut', 'cwel',
-  'ciot', 'pedał', 'pedal', 'dziwk', 'suka', 'suki', 'suko', 'sukin', 'dupa', 'dupy', 'dupę', 'dupie', 'dupek', 'gówn', 'srać', 'sra', 'sraj',
-  'szcza', 'ruchać', 'rucha', 'ruchał', 'ruchan', 'cycek', 'cycki', 'kurew', 'zdzir', 'szmat', 'murzyn', 'żyd', 'cygan', 'ciul',
-  'debil', 'idiot', 'kretyn', 'nazi', 'hitler', 'gwałc', 'gwałt', 'zabij', 'trup', 'samobój', 'narkot', 'penis', 'pochw', 'seks', 'sex', 'porno', 'orgazm', 'spust'];
-const zakazane = (w) => ZAKAZANE.some((z) => w.startsWith(z) || (z.length >= 4 && w.includes(z)));
+// Rdzeń szukany jest w środku słowa, więc odmiany (zasrany, ćwoku, bękarta) też odpadają.
+// Zbyt ostry filtr kosztuje tylko kilka słów, a za luźny kosztuje grę w sklepie.
+const ZAKAZANE = ['kurw', 'chuj', 'huj', 'pierd', 'jeb', 'pizd', 'cip', 'kutas', 'kutw', 'fiut', 'cwel',
+  'ciot', 'pedał', 'pedal', 'pedz', 'lesb', 'dziwk', 'suki', 'sukin', 'dup', 'gówn', 'sra', 'szcza',
+  'ruchać', 'rucha', 'ruchan', 'cycek', 'cycki', 'cyc', 'kurew', 'zdzir', 'szmat', 'szmac', 'murzyn',
+  'żyd', 'cygan', 'ciul', 'debil', 'idiot', 'kretyn', 'matoł', 'gnoj', 'gnid', 'łajz', 'ćwok', 'bękart',
+  'ścierw', 'spieprz', 'palant', 'spadaj', 'rzyg', 'kurna', 'zdech', 'frajer', 'nazi', 'hitler', 'gwałc',
+  'gwałt', 'zabij', 'trup', 'samobój', 'narkot', 'penis', 'pochw', 'seks', 'sex', 'porno', 'orgazm', 'spust'];
+// "suka" i jej odmiany: tylko dokładne formy, żeby nie zablokować "sukna" czy "sukienki".
+const SUKA = /^suk(a|ą|i|ę|o|om|ami|ach|y)?$/;
+const zakazane = (w) => SUKA.test(w) || ZAKAZANE.some((z) => w.includes(z));
 
 async function wczytajSjp(p) {
   const set = new Set();
@@ -58,7 +64,7 @@ for (const [w, r] of czeste) {
 }
 const literowka = (w, r) => najczestszaForma.has(w) && najczestszaForma.get(w) * 3 < r;
 // Słowa poprawne słownikowo, ale zbyt dziwne, żeby trafić do krzyżówki (mogą być bonusem).
-const DZIWNE = new Set(['chu', 'prze', 'owa', 'goi', 'rei', 'peri', 'juz', 'mas', 'ową', 'iii', 'aha', 'och', 'ech', 'ach', 'ups', 'hej', 'hmm', 'ehe', 'oho', 'ani', 'abo', 'ale', 'ową', 'eee', 'yyy', 'ich', 'jej', 'ten', 'tej', 'tym', 'tę', 'się', 'cię', 'mnie', 'nią', 'nim', 'niej', 'tobą']);
+const DZIWNE = new Set(['chu', 'prze', 'owa', 'goi', 'rei', 'peri', 'juz', 'mas', 'ową', 'iii', 'aha', 'och', 'ech', 'ach', 'ups', 'hej', 'hmm', 'ehe', 'oho', 'ani', 'abo', 'ale', 'ową', 'eee', 'yyy', 'okay', 'okej', 'ok', 'ich', 'jej', 'ten', 'tej', 'tym', 'tę', 'się', 'cię', 'mnie', 'nią', 'nim', 'niej', 'tobą']);
 // Imiona i angielskie wtrącenia z napisów filmowych ("bart", "berta"): słowo częste po angielsku,
 // a rzadkie po polsku, nie trafia do krzyżówki.
 const angielskie = new Set(enPath ? fs.readFileSync(enPath, 'utf8').split('\n').slice(0, 30000).map((l) => l.split(' ')[0]) : []);
@@ -68,12 +74,41 @@ const pulaSiatki = czeste.filter(([w, r]) => r <= progRangi(w) && !DZIWNE.has(w)
 const doBonusu = new Set(czeste.filter(([w, r]) => !literowka(w, r)).map(([w]) => w));
 const pulaBonus = czeste.map(([w]) => w).filter((w) => doBonusu.has(w));
 
+// Końcowa kontrola poziomu: każdy ciąg co najmniej dwóch liter w siatce (w poziomie i w pionie)
+// musi być dokładnie jednym ułożonym słowem, a wszystkie słowa muszą dać się złożyć z koła.
+// Dzięki temu żadne słowo nie jest ukryte w innym i nie ma przypadkowych ciągów.
+function poprawnyPoziom(wybrane, m) {
+  const litery = new Map();
+  for (const { s, x, y, d } of wybrane) {
+    if (zakazane(s) || !miesci(s, m)) return false;
+    for (let i = 0; i < s.length; i++) {
+      const klucz = `${x + (d === 'p' ? i : 0)},${y + (d === 'p' ? 0 : i)}`;
+      if (litery.has(klucz) && litery.get(klucz) !== s[i]) return false;
+      litery.set(klucz, s[i]);
+    }
+  }
+  const ulozone = new Set(wybrane.map(({ s, x, y, d }) => `${d}${x},${y},${s.length}`));
+  const ciagi = new Set();
+  for (const klucz of litery.keys()) {
+    const [x, y] = klucz.split(',').map(Number);
+    for (const d of ['p', 'd']) {
+      const dx = d === 'p' ? 1 : 0, dy = 1 - dx;
+      if (litery.has(`${x - dx},${y - dy}`)) continue; // ciąg zaczyna się wcześniej
+      let n = 0;
+      while (litery.has(`${x + dx * n},${y + dy * n}`)) n++;
+      if (n >= 2) ciagi.add(`${d}${x},${y},${n}`);
+    }
+  }
+  return ciagi.size === ulozone.size && [...ulozone].every((z) => ciagi.has(z));
+}
+
 // Układanie słów w krzyżówkę: kratki (x,y), kierunek 'p' (poziomo) lub 'd' (w dół).
 function uloz(slowa) {
   let najlepszy = null;
   for (let proba = 0; proba < 40; proba++) {
     const kolejnosc = [slowa[0], ...tasuj(slowa.slice(1))];
     const siatka = new Map();
+    const kier = new Map(); // kratka -> kierunki słów, które przez nią przechodzą
     const k = (x, y) => x + ',' + y;
     const polozone = [];
     const mozna = (w, x, y, d) => {
@@ -84,7 +119,9 @@ function uloz(slowa) {
         const cx = x + dx * i, cy = y + dy * i;
         const c = siatka.get(k(cx, cy));
         if (c !== undefined) {
-          if (c !== w[i]) return -1;
+          // Krzyżować można tylko słowem w innym kierunku. Ten sam kierunek to nakładanie
+          // się słów, które chowa jedno w drugim.
+          if (c !== w[i] || kier.get(k(cx, cy)).has(d)) return -1;
           skrzyz++;
         } else if (siatka.has(k(cx + dy, cy + dx)) || siatka.has(k(cx - dy, cy - dx))) return -1;
       }
@@ -92,7 +129,12 @@ function uloz(slowa) {
       return skrzyz;
     };
     const poloz = (w, x, y, d) => {
-      for (let i = 0; i < w.length; i++) siatka.set(k(x + (d === 'p' ? i : 0), y + (d === 'p' ? 0 : i)), w[i]);
+      for (let i = 0; i < w.length; i++) {
+        const klucz = k(x + (d === 'p' ? i : 0), y + (d === 'p' ? 0 : i));
+        siatka.set(klucz, w[i]);
+        if (!kier.has(klucz)) kier.set(klucz, new Set());
+        kier.get(klucz).add(d);
+      }
       polozone.push({ s: w, x, y, d });
     };
     poloz(kolejnosc[0], 0, 0, 'p');
@@ -163,6 +205,7 @@ for (let n = 1; poziomy.length < LICZBA; n++) {
       Object.assign(u, u2); wybrane = u2.w;
     }
     if (wybrane.length < minS || u.W > 12 || u.H > 12) continue;
+    if (!poprawnyPoziom(wybrane, m)) continue;
     const bonus = pulaBonus.filter((w) => miesci(w, m) && !wybrane.some((p) => p.s === w));
     uzyteZestawy.add(zestaw);
     poziom = { l: tasuj([...baza]).join(''), W: u.W, H: u.H, w: wybrane, b: bonus };

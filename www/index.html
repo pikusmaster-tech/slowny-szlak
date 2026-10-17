@@ -120,6 +120,12 @@
 </div>
 
 <script src="capacitor.js"></script>
+<script>
+  // Zabezpieczenie: gdyby moduł gry się nie wczytał, nie zostawiamy gracza na ekranie powitalnym.
+  setTimeout(function () {
+    try { if (window.Capacitor && Capacitor.isNativePlatform()) Capacitor.registerPlugin('SplashScreen').hide(); } catch (e) {}
+  }, 6000);
+</script>
 <script type="module" src="js/gra.js"></script>
 </body>
 </html>
