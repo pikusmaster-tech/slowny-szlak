@@ -13,6 +13,8 @@ const DOMYSLNY = {
   dzienna: null, // postęp wyzwania dnia
   bezReklam: false, // zakup „usuń reklamy”; potwierdzany w Google Play przy każdym uruchomieniu
   podpowiedziDzis: null, // { data, ile } podpowiedzi za monety w danym dniu
+  motyw: 'klasyczny', // wygląd kafelków liter
+  kupioneMotywy: ['klasyczny'],
   odOstatniejReklamy: 0,
   znalezioneBonusy: 0,
   slowWszystkich: 0,

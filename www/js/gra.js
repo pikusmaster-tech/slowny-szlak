@@ -8,6 +8,7 @@ import { startReklam, mozePelnoekranowa, nagradzana, ustawieniaPrywatnosci } fro
 import { KONFIG } from './konfiguracja.js';
 import { natywna, wtyczka } from './natywne.js';
 import { zakupyDostepne, cenaBezReklam, sprawdzZakupy, kupBezReklam, przywrocZakup } from './zakupy.js';
+import { MOTYWY, znajdzMotyw } from './motywy.js';
 
 const $ = (s) => document.querySelector(s);
 const DUZE = (s) => s.toLocaleUpperCase('pl');
@@ -514,8 +515,66 @@ function pokazRaczke() {
   komunikat('Przeciągnij po literach');
 }
 
+// ---------- Wygląd liter ----------
+// Motyw zmienia kolory kafelków (zmienne --kafel-* w styl.css). Kupujemy go za monety z gry.
+const LITERY_PODGLADU = ['S', 'Ł', 'O'];
+
+function ustawMotyw() {
+  document.body.dataset.motyw = znajdzMotyw(S.motyw).id;
+}
+
+function pokazInfoMotywu(tekst) {
+  const el = $('#motywy-info');
+  el.textContent = tekst;
+  el.hidden = !tekst;
+}
+
+function odswiezMotywy() {
+  $('#lista-motywow').innerHTML = MOTYWY.map((m) => {
+    const wybrany = S.motyw === m.id;
+    const stan = wybrany ? 'W użyciu' : S.kupioneMotywy.includes(m.id) ? 'Wybierz' : `${m.cena} monet`;
+    const kafle = LITERY_PODGLADU.map((l) => `<span class="kafel-podglad">${l}</span>`).join('');
+    return `<button class="motyw${wybrany ? ' wybrany' : ''}" data-motyw-id="${m.id}"><span class="kafle" data-motyw="${m.id}">${kafle}</span><span>${m.nazwa}</span><small>${stan}</small></button>`;
+  }).join('');
+}
+
+function pokazMotywy() {
+  pokazInfoMotywu('');
+  odswiezMotywy();
+  otworz('#okno-motywy');
+}
+
+function zamknijMotywy() {
+  zamknij('#okno-motywy');
+  otworz('#ustawienia');
+}
+
+function klikMotyw(id) {
+  const m = znajdzMotyw(id);
+  if (S.kupioneMotywy.includes(id)) {
+    Dzwiek.klik();
+  } else {
+    // Sprawdzamy saldo bez monet, które dopiero lecą do licznika.
+    if (Math.max(0, S.monety - oczekujace) < m.cena) {
+      Dzwiek.blad();
+      pokazInfoMotywu(`Za mało monet. ${m.nazwa} kosztuje ${m.cena}.`);
+      return;
+    }
+    S.monety -= m.cena;
+    S.kupioneMotywy.push(id);
+    odswiezMonety(true);
+    Dzwiek.moneta();
+  }
+  S.motyw = id;
+  zapisz();
+  ustawMotyw();
+  pokazInfoMotywu('');
+  odswiezMotywy();
+}
+
 // ---------- Start ----------
 function podepnij() {
+  ustawMotyw();
   kolo = new Kolo($('#kolo'), {
     naLitere: (i) => { Dzwiek.litera(i); wibruj(8); },
     naZmiane: (s) => podglad(s),
@@ -552,11 +611,15 @@ function podepnij() {
   $('#u-prywatnosc-reklam').onclick = ustawieniaPrywatnosci;
   $('#u-bez-reklam').onclick = kupTeraz;
   $('#u-przywroc').onclick = przywrocTeraz;
+  $('#u-wyglad').onclick = () => { zamknij('#ustawienia'); pokazMotywy(); };
+  $('#lista-motywow').onclick = (e) => { const b = e.target.closest('[data-motyw-id]'); if (b) klikMotyw(b.dataset.motywId); };
+  $('#motywy-zamknij').onclick = zamknijMotywy;
   $('#u-zamknij').onclick = () => zamknij('#ustawienia');
   // Przycisk "wstecz" na Androidzie
   wtyczka('App')?.addListener('backButton', () => {
     const otwarta = document.querySelector('.nakladka.otwarta');
     if (otwarta?.id === 'wygrana') dalej();
+    else if (otwarta?.id === 'okno-motywy') zamknijMotywy();
     else if (otwarta?.id === 'nowy-szlak') wyjdzZPoziomu();
     else if (otwarta) otwarta.classList.remove('otwarta');
     else if (biezacy) wyjdzZPoziomu();

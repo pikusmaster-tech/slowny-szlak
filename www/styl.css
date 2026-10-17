@@ -214,3 +214,20 @@ svg { width: 100%; height: 100%; display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01s !important; transition-duration: .01s !important; } }
+
+/* Motywy kafelków liter: zmienne ustawia atrybut data-motyw na ciele strony albo na podglądzie. */
+:root, [data-motyw="klasyczny"] { --kafel-tlo: linear-gradient(160deg, #ffffff, #ffeec4); --kafel-krawedz: #d9a441; --kafel-tekst: #2a2350; }
+[data-motyw="drewno"] { --kafel-tlo: linear-gradient(160deg, #e0a96d, #a46b38); --kafel-krawedz: #6b4220; --kafel-tekst: #fff6e6; }
+[data-motyw="pergamin"] { --kafel-tlo: linear-gradient(160deg, #f8ecc9, #d6b77d); --kafel-krawedz: #8f6d3b; --kafel-tekst: #4a3218; }
+[data-motyw="szklo"] { --kafel-tlo: linear-gradient(160deg, #e6f7ff, #7fbde0); --kafel-krawedz: #4d86ad; --kafel-tekst: #123a5c; }
+[data-motyw="pastel"] { --kafel-tlo: linear-gradient(160deg, #ffd9f2, #bfd4ff); --kafel-krawedz: #8c74cc; --kafel-tekst: #3a2b6b; }
+.kratka .l { background: var(--kafel-tlo); color: var(--kafel-tekst); box-shadow: 0 3px 0 var(--kafel-krawedz); }
+.litera { background: var(--kafel-tlo); color: var(--kafel-tekst); box-shadow: 0 4px 0 var(--kafel-krawedz), 0 8px 16px rgba(0,0,0,.25); }
+.litera.wybrana { background: linear-gradient(160deg, #ffd34d, #ff9f1c); color: #fff; }
+.lista-motywow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.motyw { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 16px; background: rgba(255,255,255,.08); border: 2px solid var(--ramka); color: #fff; font-weight: 800; font-size: 15px; }
+.motyw.wybrany { border-color: #ffcf3f; box-shadow: 0 0 14px rgba(255,190,60,.5); }
+.motyw .kafle { display: flex; gap: 6px; }
+.kafel-podglad { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 1000; font-size: 18px; background: var(--kafel-tlo); color: var(--kafel-tekst); box-shadow: 0 3px 0 var(--kafel-krawedz); }
+.motyw small { font-weight: 700; opacity: .85; font-size: 13px; }
+#okno-motywy .monety { width: fit-content; margin: 0 auto 12px; }
