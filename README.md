@@ -29,7 +29,8 @@ Zmienne repozytorium: `ADMOB_APP_ID`, `ADMOB_PELNOEKRANOWA`, `ADMOB_NAGRODZONA` 
 ## Nowe poziomy
 
 ```
-node narzedzia/generuj-poziomy.mjs slowa.txt pl_50k.txt www 2000 en_50k.txt
+node narzedzia/generuj-poziomy.mjs slowa.txt pl_50k.txt www 2500 en_50k.txt odm.txt
 ```
 `slowa.txt` to słownik do gier z https://sjp.pl/sl/growy/ (CC BY 4.0),
+`odm.txt` to słownik odmian z https://sjp.pl/sl/odmiany/ (CC BY 4.0), służy do rozpoznawania słów z jednego rdzenia;
 `pl_50k.txt` i `en_50k.txt` pochodzą z https://github.com/hermitdave/FrequencyWords (CC BY-SA 4.0).

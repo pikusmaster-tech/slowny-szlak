@@ -1,12 +1,12 @@
-// Generator poziomów do gry "Słowne Koło".
-// Wejście: słownik SJP do gier (slowa.txt, CC BY 4.0) i lista frekwencyjna
-// FrequencyWords pl_50k.txt (CC BY-SA 4.0). Wyjście: www/poziomy.json i www/slownik.json.
-// Użycie: node generuj-poziomy.mjs <slowa.txt> <pl_50k.txt> <katalog_www> [liczba_poziomow] [en_50k.txt]
+// Generator poziomów do gry "Słowny Szlak".
+// Wejście: słownik SJP do gier (slowa.txt, CC BY 4.0), lista frekwencyjna FrequencyWords
+// pl_50k.txt (CC BY-SA 4.0) i słownik odmian SJP (odm.txt, CC BY 4.0). Wyjście: www/poziomy.json.
+// Użycie: node generuj-poziomy.mjs <slowa.txt> <pl_50k.txt> <katalog_www> [liczba_poziomow] [en_50k.txt] [odm.txt]
 import fs from 'node:fs';
 import readline from 'node:readline';
 import path from 'node:path';
 
-const [sjpPath, freqPath, outDir, nArg, enPath] = process.argv.slice(2);
+const [sjpPath, freqPath, outDir, nArg, enPath, odmPath] = process.argv.slice(2);
 const LICZBA = Number(nArg || 2000);
 const LITERY = /^[aąbcćdeęfghijklłmnńoóprsśtuwyzźż]+$/;
 
@@ -34,6 +34,24 @@ async function wczytajSjp(p) {
 }
 
 const sjp = await wczytajSjp(sjpPath);
+// Słowa z SJP pogrupowane po zestawie liter. Słowem bonusowym jest każde słowo dopuszczalne
+// w grach słownych (jak w Scrabble), które da się ułożyć z liter koła, a nie tylko słowa częste.
+const podpisLiter = (w) => [...w].sort().join('');
+const poLiterach = new Map();
+for (const w of sjp) {
+  const p = podpisLiter(w);
+  if (!poLiterach.has(p)) poLiterach.set(p, []);
+  poLiterach.get(p).push(w);
+}
+function slowaZKola(litery) {
+  const podpisy = new Set();
+  for (let maska = 1; maska < 1 << litery.length; maska++) {
+    const czesc = litery.filter((_, i) => maska & (1 << i));
+    if (czesc.length >= 3) podpisy.add(czesc.sort().join(''));
+  }
+  return [...podpisy].flatMap((p) => poLiterach.get(p) || []);
+}
+
 const czeste = []; // [slowo, ranga]
 let ranga = 0;
 for (const line of fs.readFileSync(freqPath, 'utf8').split('\n')) {
@@ -71,8 +89,42 @@ const angielskie = new Set(enPath ? fs.readFileSync(enPath, 'utf8').split('\n').
 const obce = (w, r) => angielskie.has(w) && r > 3000;
 const progRangi = (w) => (w.length === 3 ? 5000 : w.length === 4 ? 12000 : 25000);
 const pulaSiatki = czeste.filter(([w, r]) => r <= progRangi(w) && !DZIWNE.has(w) && !literowka(w, r) && !obce(w, r)).map(([w]) => w);
-const doBonusu = new Set(czeste.filter(([w, r]) => !literowka(w, r)).map(([w]) => w));
-const pulaBonus = czeste.map(([w]) => w).filter((w) => doBonusu.has(w));
+const wSiatce = new Set(pulaSiatki);
+
+// Słownik odmian SJP: wiersz to lemat i jego formy (kot, kota, koty...). Zapamiętujemy numery
+// wierszy tylko dla słów, które mogą trafić do krzyżówki.
+const lematy = new Map();
+if (odmPath) {
+  const rl = readline.createInterface({ input: fs.createReadStream(odmPath, 'utf8'), crlfDelay: Infinity });
+  let nr = 0;
+  for await (const line of rl) {
+    nr++;
+    for (const f of line.split(', ')) {
+      if (!wSiatce.has(f)) continue;
+      if (!lematy.has(f)) lematy.set(f, []);
+      if (!lematy.get(f).includes(nr)) lematy.get(f).push(nr);
+    }
+  }
+  console.error(`Odmiany: lematy dla ${lematy.size} słów z puli krzyżówki`);
+}
+
+// Słowa z jednego rdzenia wyglądają w krzyżówce jak powtórki (klej, kleje, klei, lej, leje):
+// formy tego samego lematu, słowo zawarte w innym albo różnica tylko w końcówce.
+const wspolnyPoczatek = (a, b) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
+function pokrewne(a, b) {
+  if (a.includes(b) || b.includes(a)) return true;
+  if (wspolnyPoczatek(a, b) >= Math.max(3, Math.min(a.length, b.length) - 1)) return true;
+  const la = lematy.get(a), lb = lematy.get(b);
+  return !!la && !!lb && la.some((n) => lb.includes(n));
+}
+// Najczęstsze słowa w kolejności, ale każde może mieć najwyżej (limit - 1) pokrewnych wśród już wybranych.
+function roznorodne(baza, kandydaci, limit) {
+  const wynik = [];
+  for (const w of kandydaci) {
+    if ([baza, ...wynik].filter((v) => pokrewne(v, w)).length < limit) wynik.push(w);
+  }
+  return wynik;
+}
 
 // Końcowa kontrola poziomu: każdy ciąg co najmniej dwóch liter w siatce (w poziomie i w pionie)
 // musi być dokładnie jednym ułożonym słowem, a wszystkie słowa muszą dać się złożyć z koła.
@@ -176,9 +228,21 @@ const KRZYWA = [
 ];
 const etap = (n) => KRZYWA.filter((e) => n >= e[0]).pop();
 
+function zbudujPoziom(baza, kandydaci, m, minS, maxS) {
+  if (kandydaci.length + 1 < minS) return null;
+  let u = uloz([baza, ...kandydaci.slice(0, maxS + 3)].sort((a, b) => b.length - a.length));
+  if (u.w.length > maxS) {
+    // Zostaw najczęstsze słowa i ułóż jeszcze raz, żeby siatka nie była przeładowana.
+    const zostaw = [baza, ...kandydaci.filter((w) => u.w.some((p) => p.s === w)).slice(0, maxS - 1)];
+    u = uloz(zostaw.sort((a, b) => b.length - a.length));
+  }
+  if (u.w.length < minS || u.W > 12 || u.H > 12) return null;
+  return poprawnyPoziom(u.w, m) ? u : null;
+}
+
 const uzyteZestawy = new Set();
 const poziomy = [];
-const wSiatce = new Set(pulaSiatki);
+const statystyka = { bezPokrewnych: 0, zParami: 0 };
 const bazy = (dl, maxR) => tasuj(czeste.filter(([w, r]) => w.length === dl && r <= maxR && wSiatce.has(w)).map(([w]) => w));
 const kolejki = {};
 for (let n = 1; poziomy.length < LICZBA; n++) {
@@ -191,28 +255,25 @@ for (let n = 1; poziomy.length < LICZBA; n++) {
     const zestaw = [...baza].sort().join('');
     if (uzyteZestawy.has(zestaw)) continue;
     const m = licz(baza);
-    const kandydaci = pulaSiatki.filter((w) => w !== baza && miesci(w, m))
+    const wszystkie = pulaSiatki.filter((w) => w !== baza && miesci(w, m))
       .sort((a, b) => rangaSlowa.get(a) - rangaSlowa.get(b));
-    if (kandydaci.length + 1 < minS) continue;
-    const slowa = [baza, ...kandydaci.slice(0, maxS + 3)].sort((a, b) => b.length - a.length);
-    const u = uloz(slowa);
-    let wybrane = u.w;
-    if (wybrane.length > maxS) {
-      // Zostaw najczęstsze słowa i ułóż jeszcze raz, żeby siatka nie była przeładowana.
-      const zostaw = [baza, ...kandydaci.filter((w) => wybrane.some((p) => p.s === w)).slice(0, maxS - 1)];
-      const u2 = uloz(zostaw.sort((a, b) => b.length - a.length));
-      if (u2.w.length < minS) continue;
-      Object.assign(u, u2); wybrane = u2.w;
+    // Najpierw bez słów pokrewnych. Gdy słów jest za mało, każde słowo może mieć jedno pokrewne.
+    for (const limit of [1, 2]) {
+      const u = zbudujPoziom(baza, roznorodne(baza, wszystkie, limit), m, minS, maxS);
+      if (!u) continue;
+      const naSiatce = new Set(u.w.map((p) => p.s));
+      const bonus = slowaZKola([...baza]).filter((w) => !naSiatce.has(w) && !zakazane(w));
+      uzyteZestawy.add(zestaw);
+      statystyka[limit === 1 ? 'bezPokrewnych' : 'zParami']++;
+      poziom = { l: tasuj([...baza]).join(''), W: u.W, H: u.H, w: u.w, b: bonus };
+      break;
     }
-    if (wybrane.length < minS || u.W > 12 || u.H > 12) continue;
-    if (!poprawnyPoziom(wybrane, m)) continue;
-    const bonus = pulaBonus.filter((w) => miesci(w, m) && !wybrane.some((p) => p.s === w));
-    uzyteZestawy.add(zestaw);
-    poziom = { l: tasuj([...baza]).join(''), W: u.W, H: u.H, w: wybrane, b: bonus };
   }
   if (!poziom) { console.error(`Brak słów bazowych dla etapu ${klucz} przy poziomie ${n}`); break; }
   poziomy.push(poziom);
 }
+const sredniaBonusow = poziomy.reduce((s, p) => s + p.b.length, 0) / poziomy.length;
+console.error(`Poziomy bez słów pokrewnych: ${statystyka.bezPokrewnych}, z jedną parą na słowo: ${statystyka.zParami}, średnio słów bonusowych: ${sredniaBonusow.toFixed(1)}`);
 
 const slownik = [...new Set(poziomy.flatMap((p) => p.b))];
 const bonusIdx = new Map(slownik.map((w, i) => [w, i]));

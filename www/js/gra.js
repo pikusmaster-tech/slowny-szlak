@@ -126,6 +126,12 @@ function ekranStartowy() {
 // ---------- Poziom ----------
 function hashDaty(d) { let h = 2166136261; for (const c of d) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
+// Po aktualizacji poziomów zapis z poprzedniej wersji może nie pasować do krzyżówki.
+function zapisPasuje(zapis, dane) {
+  const hasla = new Set(dane.w.map((p) => p.s));
+  return zapis.znalezione.every((s) => hasla.has(s));
+}
+
 function wczytajPoziom(tryb) {
   if (!DANE) return;
   document.querySelectorAll('.nakladka.otwarta').forEach((n) => n.classList.remove('otwarta'));
@@ -140,7 +146,7 @@ function wczytajPoziom(tryb) {
     const e = etapDlaPoziomu(1 + (hashDaty(d + 's') % 240));
     etap = { ...e, szlak: SZLAKI[hashDaty(d) % SZLAKI.length], pora: PORY[hashDaty(d + 'p') % PORY.length] };
     ziarno = hashDaty(d) % 100000;
-    if (!S.dzienna || S.dzienna.data !== d) S.dzienna = { data: d, znalezione: [], odkryte: [], bonusy: [] };
+    if (!S.dzienna || S.dzienna.data !== d || (!S.dzienna.ukonczona && !zapisPasuje(S.dzienna, dane))) S.dzienna = { data: d, znalezione: [], odkryte: [], bonusy: [] };
     zapis = S.dzienna;
   } else {
     nr = S.poziom;
@@ -148,7 +154,7 @@ function wczytajPoziom(tryb) {
     dane = DANE.poziomy[(nr - 1) % DANE.poziomy.length];
     etap = etapDlaPoziomu(nr);
     ziarno = etap.nr + 1;
-    if (!S.postep || S.postep.poziom !== nr) S.postep = { poziom: nr, znalezione: [], odkryte: [], bonusy: [] };
+    if (!S.postep || S.postep.poziom !== nr || !zapisPasuje(S.postep, dane)) S.postep = { poziom: nr, znalezione: [], odkryte: [], bonusy: [] };
     zapis = S.postep;
     // Poziom rozwiązany, ale nie zaliczony (np. stary zapis): zaliczamy i przechodzimy dalej.
     if (zapis.znalezione.length >= dane.w.length) {
