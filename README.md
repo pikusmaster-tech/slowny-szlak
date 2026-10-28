@@ -34,3 +34,11 @@ node narzedzia/generuj-poziomy.mjs slowa.txt pl_50k.txt www 2500 en_50k.txt odm.
 `slowa.txt` to słownik do gier z https://sjp.pl/sl/growy/ (CC BY 4.0),
 `odm.txt` to słownik odmian z https://sjp.pl/sl/odmiany/ (CC BY 4.0), służy do rozpoznawania słów z jednego rdzenia;
 `pl_50k.txt` i `en_50k.txt` pochodzą z https://github.com/hermitdave/FrequencyWords (CC BY-SA 4.0).
+
+Wersja angielska (Word Trail) ma osobne poziomy w `www/poziomy-en.json`:
+```
+JEZYK=en node narzedzia/generuj-poziomy.mjs enable1.txt en_50k.txt www 2500
+```
+`enable1.txt` to lista słów ENABLE (domena publiczna). Język gry wybiera się według języka urządzenia
+(polski albo angielski), a gracz może go zmienić w ustawieniach. Teksty interfejsu są w `www/js/jezyk.js`,
+angielski opis do sklepu w `sklep/opis-en.json`, zrzuty w `sklep/zrzuty-en` (`JEZYK=en node narzedzia/zrzuty-sklep.mjs`).

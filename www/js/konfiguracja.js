@@ -22,4 +22,5 @@ export const KONFIG = {
   nagrodaZaSloik: 30,
   bonusowDoSloika: 8,
   politykaPrywatnosci: 'https://pikusmaster-tech.github.io/slowny-szlak/prywatnosc.html',
+  politykaPrywatnosciEn: 'https://pikusmaster-tech.github.io/slowny-szlak/privacy.html',
 };

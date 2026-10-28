@@ -7,10 +7,14 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const PAKIET = 'pl.slownyszlak.gra';
-const JEZYK = 'pl-PL';
 const API = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PAKIET}`;
 const UPLOAD = `https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/${PAKIET}`;
 const KORZEN = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+// Wersje językowe opisu w sklepie: [kod Google Play, plik opisu, katalog zrzutów, plik „co nowego”].
+const JEZYKI = [
+  ['pl-PL', 'sklep/opis.json', 'sklep/zrzuty', 'sklep/co-nowego.txt'],
+  ['en-US', 'sklep/opis-en.json', 'sklep/zrzuty-en', 'sklep/co-nowego-en.txt'],
+].filter(([, opis]) => fs.existsSync(path.join(KORZEN, opis)));
 
 const [plikAab, sciezka = 'internal', ...flagi] = process.argv.slice(2);
 const zSklepem = flagi.includes('--sklep');
@@ -56,25 +60,28 @@ console.log('Edycja', E);
 if (plikAab && plikAab !== '-') {
   const pakiet = await zapytanie('POST', `${UPLOAD}/edits/${E}/bundles?uploadType=media`, fs.readFileSync(plikAab), 'application/octet-stream');
   console.log('Wysłano wersję', pakiet.versionCode);
-  const notatki = fs.existsSync(path.join(KORZEN, 'sklep/co-nowego.txt')) ? fs.readFileSync(path.join(KORZEN, 'sklep/co-nowego.txt'), 'utf8').trim().slice(0, 500) : 'Poprawki i nowe poziomy.';
+  const notatki = (plik, domyslne) => (fs.existsSync(path.join(KORZEN, plik)) ? fs.readFileSync(path.join(KORZEN, plik), 'utf8').trim().slice(0, 500) : domyslne);
+  const releaseNotes = JEZYKI.map(([jezyk, , , plik]) => ({ language: jezyk, text: notatki(plik, jezyk === 'pl-PL' ? 'Poprawki i nowe poziomy.' : 'Fixes and new levels.') }));
   await zapytanie('PUT', `${API}/edits/${E}/tracks/${sciezka}`, {
     track: sciezka,
-    releases: [{ versionCodes: [String(pakiet.versionCode)], status: szkic ? 'draft' : 'completed', releaseNotes: [{ language: JEZYK, text: notatki }] }],
+    releases: [{ versionCodes: [String(pakiet.versionCode)], status: szkic ? 'draft' : 'completed', releaseNotes }],
   });
   console.log('Ścieżka', sciezka, szkic ? '(szkic)' : '(wydane)');
 }
 
 if (zSklepem) {
-  const opis = JSON.parse(fs.readFileSync(path.join(KORZEN, 'sklep/opis.json'), 'utf8'));
-  await zapytanie('PUT', `${API}/edits/${E}/listings/${JEZYK}`, { language: JEZYK, title: opis.tytul, shortDescription: opis.krotki, fullDescription: opis.pelny });
-  console.log('Zaktualizowano opis w sklepie');
-  const obrazy = [['icon', 'sklep/grafika/ikona-512.png'], ['featureGraphic', 'sklep/grafika/baner-1024x500.png']];
-  const zrzuty = fs.readdirSync(path.join(KORZEN, 'sklep/zrzuty')).filter((f) => f.endsWith('.png')).sort();
-  await zapytanie('DELETE', `${API}/edits/${E}/listings/${JEZYK}/phoneScreenshots`);
-  for (const z of zrzuty) obrazy.push(['phoneScreenshots', 'sklep/zrzuty/' + z]);
-  for (const [typ, plik] of obrazy) {
-    await zapytanie('POST', `${UPLOAD}/edits/${E}/listings/${JEZYK}/${typ}?uploadType=media`, fs.readFileSync(path.join(KORZEN, plik)), 'image/png');
-    console.log('Obraz', typ, plik);
+  for (const [JEZYK, plikOpisu, katalogZrzutow] of JEZYKI) {
+    const opis = JSON.parse(fs.readFileSync(path.join(KORZEN, plikOpisu), 'utf8'));
+    await zapytanie('PUT', `${API}/edits/${E}/listings/${JEZYK}`, { language: JEZYK, title: opis.tytul, shortDescription: opis.krotki, fullDescription: opis.pelny });
+    console.log('Zaktualizowano opis w sklepie', JEZYK);
+    const obrazy = [['icon', 'sklep/grafika/ikona-512.png'], ['featureGraphic', 'sklep/grafika/baner-1024x500.png']];
+    const zrzuty = fs.readdirSync(path.join(KORZEN, katalogZrzutow)).filter((f) => f.endsWith('.png')).sort();
+    await zapytanie('DELETE', `${API}/edits/${E}/listings/${JEZYK}/phoneScreenshots`);
+    for (const z of zrzuty) obrazy.push(['phoneScreenshots', `${katalogZrzutow}/${z}`]);
+    for (const [typ, plik] of obrazy) {
+      await zapytanie('POST', `${UPLOAD}/edits/${E}/listings/${JEZYK}/${typ}?uploadType=media`, fs.readFileSync(path.join(KORZEN, plik)), 'image/png');
+      console.log('Obraz', JEZYK, typ, plik);
+    }
   }
 }
 

@@ -2,13 +2,16 @@
 // Wejście: słownik SJP do gier (slowa.txt, CC BY 4.0), lista frekwencyjna FrequencyWords
 // pl_50k.txt (CC BY-SA 4.0) i słownik odmian SJP (odm.txt, CC BY 4.0). Wyjście: www/poziomy.json.
 // Użycie: node generuj-poziomy.mjs <slowa.txt> <pl_50k.txt> <katalog_www> [liczba_poziomow] [en_50k.txt] [odm.txt]
+// Wersja angielska: JEZYK=en node generuj-poziomy.mjs <enable1.txt> <en_50k.txt> <katalog_www> [liczba_poziomow]
+// Słownik ENABLE jest w domenie publicznej. Wyjście: www/poziomy-en.json.
 import fs from 'node:fs';
 import readline from 'node:readline';
 import path from 'node:path';
 
 const [sjpPath, freqPath, outDir, nArg, enPath, odmPath] = process.argv.slice(2);
 const LICZBA = Number(nArg || 2000);
-const LITERY = /^[aąbcćdeęfghijklłmnńoóprsśtuwyzźż]+$/;
+const EN = process.env.JEZYK === 'en';
+const LITERY = EN ? /^[a-z]+$/ : /^[aąbcćdeęfghijklłmnńoóprsśtuwyzźż]+$/;
 
 // Słowa, których nie chcemy w grze (rdzenie wulgaryzmów i obraźliwych słów).
 // Rdzeń szukany jest w środku słowa, więc odmiany (zasrany, ćwoku, bękarta) też odpadają.
@@ -21,7 +24,16 @@ const ZAKAZANE = ['kurw', 'chuj', 'huj', 'pierd', 'jeb', 'pizd', 'cip', 'kutas',
   'gwałt', 'zabij', 'trup', 'samobój', 'narkot', 'penis', 'pochw', 'seks', 'sex', 'porno', 'orgazm', 'spust'];
 // "suka" i jej odmiany: tylko dokładne formy, żeby nie zablokować "sukna" czy "sukienki".
 const SUKA = /^suk(a|ą|i|ę|o|om|ami|ach|y)?$/;
-const zakazane = (w) => SUKA.test(w) || ZAKAZANE.some((z) => w.includes(z));
+// Angielskie rdzenie szukane w środku słowa: tylko takie, które nie są częścią zwykłych słów.
+// Krótsze (ass w "class", rape w "grape", meth w "method") blokujemy tylko jako całe słowa z końcówką,
+// bo zablokowanie "grape" jako bonusu wyglądałoby dla gracza jak błąd słownika.
+const ZAKAZANE_EN = ['fuck', 'shit', 'cunt', 'bitch', 'whore', 'slut', 'nigg', 'faggot', 'dyke', 'piss', 'penis',
+  'vagin', 'porn', 'nazi', 'hitler', 'rapist', 'murder', 'suicid', 'bastard', 'boob', 'jizz', 'spunk', 'wank',
+  'twat', 'pussy', 'retard', 'heroin', 'cocain', 'orgasm', 'horny', 'sperm', 'nipple', 'dildo', 'hooker'];
+const DOKLADNE_EN = /^(ass|arse|cum|hell|god|tit|turd|hoe|ho|pee|poo|poop|puke|vomit|nob|knob|bum|gay|sod|bra|bong|booze|lust|kink|stab|slay|gore|kill|die|dead|death|gun|rape|crap|damn|butt|anal|anus|homo|queer|spic|kike|chink|gook|wop|jap|negro|coon|cock|dick|prick|sex|sexy|drug|meth|corpse|nude|naked|semen|fag|slave|thug)(s|es|ed|d|ing|er|ers|y|ies)?$/;
+const zakazane = EN
+  ? (w) => DOKLADNE_EN.test(w) || ZAKAZANE_EN.some((z) => w.includes(z))
+  : (w) => SUKA.test(w) || ZAKAZANE.some((z) => w.includes(z));
 
 async function wczytajSjp(p) {
   const set = new Set();
@@ -82,12 +94,28 @@ for (const [w, r] of czeste) {
 }
 const literowka = (w, r) => najczestszaForma.has(w) && najczestszaForma.get(w) * 3 < r;
 // Słowa poprawne słownikowo, ale zbyt dziwne, żeby trafić do krzyżówki (mogą być bonusem).
-const DZIWNE = new Set(['chu', 'prze', 'owa', 'goi', 'rei', 'peri', 'juz', 'mas', 'ową', 'iii', 'aha', 'och', 'ech', 'ach', 'ups', 'hej', 'hmm', 'ehe', 'oho', 'ani', 'abo', 'ale', 'ową', 'eee', 'yyy', 'okay', 'okej', 'ok', 'ich', 'jej', 'ten', 'tej', 'tym', 'tę', 'się', 'cię', 'mnie', 'nią', 'nim', 'niej', 'tobą']);
+const DZIWNE_EN = ['ohh', 'ooh', 'hmm', 'hmmm', 'uhh', 'umm', 'yeah', 'yea', 'nah', 'okay', 'gonna', 'wanna', 'gotta',
+  'dont', 'cant', 'wont', 'didnt', 'isnt', 'aint', 'its', 'ill', 'shes', 'hes', 'youre', 'theyre', 'whats', 'thats',
+  'lets', 'wasnt', 'arent', 'havent', 'hadnt', 'mrs', 'aha', 'huh', 'heh', 'hah', 'ahh', 'aww', 'eww', 'yah', 'yup',
+  'nope', 'mmm', 'shh', 'psst', 'tsk', 'brr', 'grr', 'zzz', 'pst', 'hon', 'mom', 'mum', 'dad', 'bye', 'hey', 'ole',
+  'ere', 'tis', 'twas', 'thee', 'thou', 'thy', 'thine', 'hath', 'doth', 'nay', 'aye', 'oft', 'amen',
+  // Słowa z listy, które w napisach są głównie imionami albo skrótami ("sue", "lee", "don").
+  'ain', 'sec', 'don', 'sue', 'lee', 'ted', 'kris', 'vera', 'anna', 'maria', 'toby', 'tony', 'tate', 'erica',
+  'ginny', 'terra', 'shelly', 'nancy', 'tommy', 'donna', 'christy', 'tiffany', 'abigail', 'matilda', 'jane',
+  'colleen', 'marge', 'madonna', 'perry', 'jerry', 'laura', 'nelly', 'lulu', 'sally', 'ariel', 'geneva', 'molly',
+  'max', 'mac', 'jim', 'tim', 'sam', 'ben', 'tom', 'bob', 'joe', 'dan', 'ron', 'ken', 'ted', 'lou', 'dee', 'gal',
+  'nana', 'clary', 'noel', 'cos', 'gee', 'doc', 'bro', 'alan', 'cole', 'peter', 'lang', 'ugh', 'aah', 'dang', 'ling',
+  'dope', 'ting', 'pee', 'tho', 'soviet', 'soviets', 'colin', 'alec', 'paris', 'turk', 'saul', 'troy', 'otto', 'jin',
+  'crore', 'khan', 'mars', 'yep', 'yay', 'oops', 'groin', 'weed', 'moans', 'scum', 'dale', 'earl', 'flora', 'lily'];
+const DZIWNE = new Set([...(EN ? DZIWNE_EN : []), 'chu', 'prze', 'owa', 'goi', 'rei', 'peri', 'juz', 'mas', 'ową', 'iii', 'aha', 'och', 'ech', 'ach', 'ups', 'hej', 'hmm', 'ehe', 'oho', 'ani', 'abo', 'ale', 'ową', 'eee', 'yyy', 'okay', 'okej', 'ok', 'ich', 'jej', 'ten', 'tej', 'tym', 'tę', 'się', 'cię', 'mnie', 'nią', 'nim', 'niej', 'tobą']);
 // Imiona i angielskie wtrącenia z napisów filmowych ("bart", "berta"): słowo częste po angielsku,
 // a rzadkie po polsku, nie trafia do krzyżówki.
 const angielskie = new Set(enPath ? fs.readFileSync(enPath, 'utf8').split('\n').slice(0, 30000).map((l) => l.split(' ')[0]) : []);
-const obce = (w, r) => angielskie.has(w) && r > 3000;
-const progRangi = (w) => (w.length === 3 ? 5000 : w.length === 4 ? 12000 : 25000);
+const obce = (w, r) => !EN && angielskie.has(w) && r > 3000;
+// Angielska lista z napisów ma więcej imion i skrótów na dalszych miejscach, więc progi są ostrzejsze.
+const progRangi = EN
+  ? (w) => (w.length === 3 ? 4000 : w.length === 4 ? 9000 : 20000)
+  : (w) => (w.length === 3 ? 5000 : w.length === 4 ? 12000 : 25000);
 const pulaSiatki = czeste.filter(([w, r]) => r <= progRangi(w) && !DZIWNE.has(w) && !literowka(w, r) && !obce(w, r)).map(([w]) => w);
 const wSiatce = new Set(pulaSiatki);
 
@@ -111,8 +139,11 @@ if (odmPath) {
 // Słowa z jednego rdzenia wyglądają w krzyżówce jak powtórki (klej, kleje, klei, lej, leje):
 // formy tego samego lematu, słowo zawarte w innym albo różnica tylko w końcówce.
 const wspolnyPoczatek = (a, b) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
+// Po angielsku nie ma słownika odmian, więc porównujemy rdzenie po obcięciu typowych końcówek.
+const rdzenEn = (w) => w.replace(/(ings?|ers?|est|ed|es|s|ly|y|e)$/, '');
 function pokrewne(a, b) {
   if (a.includes(b) || b.includes(a)) return true;
+  if (EN && rdzenEn(a).length >= 3 && rdzenEn(a) === rdzenEn(b)) return true;
   if (wspolnyPoczatek(a, b) >= Math.max(3, Math.min(a.length, b.length) - 1)) return true;
   const la = lematy.get(a), lb = lematy.get(b);
   return !!la && !!lb && la.some((n) => lb.includes(n));
@@ -279,5 +310,5 @@ const slownik = [...new Set(poziomy.flatMap((p) => p.b))];
 const bonusIdx = new Map(slownik.map((w, i) => [w, i]));
 const wynik = poziomy.map((p) => ({ ...p, b: p.b.map((w) => bonusIdx.get(w)) }));
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, 'poziomy.json'), JSON.stringify({ slownik, poziomy: wynik }));
+fs.writeFileSync(path.join(outDir, EN ? 'poziomy-en.json' : 'poziomy.json'), JSON.stringify({ slownik, poziomy: wynik }));
 console.error(`Zapisano ${poziomy.length} poziomów, słów bonusowych: ${slownik.length}`);

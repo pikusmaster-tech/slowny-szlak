@@ -1,4 +1,6 @@
 // Zapis postępu gracza w pamięci urządzenia (localStorage działa też w aplikacji na Androida).
+import { JEZYK } from './jezyk.js';
+
 const KLUCZ = 'slowny-szlak-v1';
 
 const DOMYSLNY = {
@@ -21,11 +23,22 @@ const DOMYSLNY = {
   pierwszeUruchomienie: Date.now(),
 };
 
+// Każdy język ma własne poziomy, więc postęp na szlaku i wyzwanie dnia zapisujemy osobno dla języka.
+// Monety, motywy, zakup i ustawienia są wspólne.
+const WLASNE_JEZYKA = ['poziom', 'postep', 'seria', 'ostatniaDzienna', 'dzienna'];
+const wybierz = (o) => Object.fromEntries(WLASNE_JEZYKA.map((k) => [k, o[k] ?? DOMYSLNY[k]]));
+
 let stan;
-try { stan = { ...DOMYSLNY, ...JSON.parse(localStorage.getItem(KLUCZ) || '{}') }; } catch { stan = { ...DOMYSLNY }; }
+try {
+  const zapisany = JSON.parse(localStorage.getItem(KLUCZ) || '{}');
+  // Zapis sprzed wersji językowych ma postęp polski w głównych polach.
+  if (!zapisany.jezyki && Object.keys(zapisany).length) zapisany.jezyki = { pl: wybierz(zapisany) };
+  stan = { ...DOMYSLNY, ...zapisany, ...wybierz(zapisany.jezyki?.[JEZYK] || {}) };
+} catch { stan = { ...DOMYSLNY }; }
 
 export const S = stan;
 export function zapisz() {
+  stan.jezyki = { ...stan.jezyki, [JEZYK]: wybierz(stan) };
   try { localStorage.setItem(KLUCZ, JSON.stringify(stan)); } catch { /* tryb prywatny: gramy bez zapisu */ }
 }
 const format = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

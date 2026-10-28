@@ -1,5 +1,6 @@
 // Generuje zrzuty ekranu do Google Play (1080x1920), baner 1024x500 i ikonę 512x512.
 // Użycie: node narzedzia/zrzuty-sklep.mjs   (wymaga Playwright z Chromium)
+// Wersja angielska: JEZYK=en node narzedzia/zrzuty-sklep.mjs (zrzuty do sklep/zrzuty-en, bez banera i ikony)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,9 +17,10 @@ const serwer = http.createServer((req, res) => {
 }).listen(0);
 const URL0 = `http://localhost:${serwer.address().port}`;
 const TMP = fs.mkdtempSync('/tmp/zrzuty-');
+const EN = process.env.JEZYK === 'en';
 
 const b = await chromium.launch();
-const gra = await (await b.newContext({ viewport: { width: 412, height: 732 }, deviceScaleFactor: 2 })).newPage();
+const gra = await (await b.newContext({ viewport: { width: 412, height: 732 }, deviceScaleFactor: 2, locale: EN ? 'en-US' : 'pl-PL' })).newPage();
 await gra.goto(`${URL0}/www/index.html?dev`);
 await gra.evaluate(() => localStorage.clear());
 await gra.reload();
@@ -77,12 +79,19 @@ await gra.evaluate(() => {
   const g = window.__gra; const d = new Date(Date.now() - 864e5);
   g.S.seria = 6; g.S.poziom = 47; g.S.postep = null;
   g.S.ostatniaDzienna = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  localStorage.setItem('slowny-szlak-v1', JSON.stringify(g.S));
+  g.zapisz();
 });
 await gra.goto(`${URL0}/www/index.html?dev`); await gra.waitForTimeout(2000);
 const z6 = await zrzut('6');
 
-const SCENY = [
+const SCENY = EN ? [
+  [z1, 'Connect letters,<br><em>make words</em>', '#1d2b64', '#6a3093'],
+  [z2, 'Over <em>2000</em> crossword levels', '#0f4c75', '#3282b8'],
+  [z3, 'Travel across<br><em>Poland</em>', '#2a1a5e', '#b0477a'],
+  [z4, 'A new <em>challenge</em><br>every day', '#5f2c82', '#49a09d'],
+  [z5, 'Relaxing<br><em>landscapes</em>', '#0b1026', '#263a74'],
+  [z6, 'Play <em>offline</em>,<br>no account needed', '#134e5e', '#2e8b57'],
+] : [
   [z1, 'Łącz litery,<br><em>układaj słowa</em>', '#1d2b64', '#6a3093'],
   [z2, 'Ponad <em>2000</em> polskich krzyżówek', '#0f4c75', '#3282b8'],
   [z3, 'Wędruj przez <em>Tatry, Mazury</em> i Bałtyk', '#2a1a5e', '#b0477a'],
@@ -91,7 +100,8 @@ const SCENY = [
   [z6, 'Graj <em>offline</em>,<br>bez zakładania konta', '#134e5e', '#2e8b57'],
 ];
 const OUT = path.join(KORZEN, 'sklep');
-fs.mkdirSync(path.join(OUT, 'zrzuty'), { recursive: true });
+const ZRZUTY = EN ? 'zrzuty-en' : 'zrzuty';
+fs.mkdirSync(path.join(OUT, ZRZUTY), { recursive: true });
 fs.mkdirSync(path.join(OUT, 'grafika'), { recursive: true });
 const rama = await (await b.newContext({ viewport: { width: 1080, height: 1920 } })).newPage();
 for (let i = 0; i < SCENY.length; i++) {
@@ -99,9 +109,10 @@ for (let i = 0; i < SCENY.length; i++) {
   fs.copyFileSync(img, path.join(KORZEN, 'narzedzia/sklep/_tmp.png'));
   await rama.goto(`${URL0}/narzedzia/sklep/ramka.html?` + new URLSearchParams({ t, a, b: c, i: '_tmp.png?' + i }));
   await rama.waitForTimeout(600);
-  await rama.screenshot({ path: path.join(OUT, 'zrzuty', `${i + 1}.png`) });
+  await rama.screenshot({ path: path.join(OUT, ZRZUTY, `${i + 1}.png`) });
 }
 fs.rmSync(path.join(KORZEN, 'narzedzia/sklep/_tmp.png'));
+if (EN) { await b.close(); serwer.close(); console.log('Zapisano zrzuty w', path.join(OUT, ZRZUTY)); process.exit(0); }
 const baner = await (await b.newContext({ viewport: { width: 1024, height: 500 } })).newPage();
 await baner.goto(`${URL0}/narzedzia/sklep/baner.html`); await baner.waitForTimeout(1000);
 await baner.screenshot({ path: path.join(OUT, 'grafika', 'baner-1024x500.png') });

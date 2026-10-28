@@ -31,19 +31,19 @@
 <!-- Ekran startowy -->
 <section id="ekran-start" class="ekran aktywny">
   <header class="pasek">
-    <button class="ikona" id="btn-ustawienia" aria-label="Ustawienia"><svg><use href="#i-zebatka"/></svg></button>
+    <button class="ikona" id="btn-ustawienia" aria-label="Ustawienia" data-t-aria="ustawienia"><svg><use href="#i-zebatka"/></svg></button>
     <div class="monety" data-monety><svg><use href="#i-moneta"/></svg><span>0</span></div>
   </header>
   <div class="logo">
     <div class="logo-litery" id="logo-litery"></div>
-    <div class="logo-pod">krzyżówki z liter · wędrówka po Polsce</div>
+    <div class="logo-pod" data-t="podLogo">krzyżówki z liter · wędrówka po Polsce</div>
   </div>
   <div class="start-dol">
     <div class="karta-szlaku" id="karta-szlaku"></div>
-    <button class="btn-graj" id="btn-graj"><svg><use href="#i-graj"/></svg><span>Graj</span><small id="graj-poziom">Poziom 1</small></button>
+    <button class="btn-graj" id="btn-graj"><svg><use href="#i-graj"/></svg><span data-t="graj">Graj</span><small id="graj-poziom">Poziom 1</small></button>
     <button class="btn-dzienna" id="btn-dzienna">
       <svg class="kal"><use href="#i-kalendarz"/></svg>
-      <span class="dz-tekst"><b>Wyzwanie dnia</b><small id="dzienna-opis">Nowa krzyżówka co rano</small></span>
+      <span class="dz-tekst"><b data-t="wyzwanieDnia">Wyzwanie dnia</b><small id="dzienna-opis">Nowa krzyżówka co rano</small></span>
       <span class="seria" id="seria"><svg><use href="#i-plomien"/></svg><b>0</b></span>
     </button>
   </div>
@@ -52,7 +52,7 @@
 <!-- Ekran gry -->
 <section id="ekran-gra" class="ekran">
   <header class="pasek">
-    <button class="ikona" id="btn-wstecz" aria-label="Wróć"><svg><use href="#i-wstecz"/></svg></button>
+    <button class="ikona" id="btn-wstecz" aria-label="Wróć" data-t-aria="wroc"><svg><use href="#i-wstecz"/></svg></button>
     <div class="tytul-poziomu"><b id="tytul-szlaku">Tatry</b><small id="tytul-nr">Poziom 1</small></div>
     <div class="monety" data-monety><svg><use href="#i-moneta"/></svg><span>0</span></div>
   </header>
@@ -61,12 +61,12 @@
   <div class="podglad" id="podglad"></div>
   <div class="strefa-kola">
     <div class="boczne lewe">
-      <button class="okragly" id="btn-sloik" aria-label="Słoik słów bonusowych"><svg><use href="#i-sloik"/></svg><span class="sloik-wypelnienie" id="sloik-wyp"></span><span class="znaczek" id="sloik-licznik">0</span></button>
-      <button class="okragly" id="btn-tasuj" aria-label="Wymieszaj litery"><svg><use href="#i-tasuj"/></svg></button>
+      <button class="okragly" id="btn-sloik" aria-label="Słoik słów bonusowych" data-t-aria="sloikBonusow"><svg><use href="#i-sloik"/></svg><span class="sloik-wypelnienie" id="sloik-wyp"></span><span class="znaczek" id="sloik-licznik">0</span></button>
+      <button class="okragly" id="btn-tasuj" aria-label="Wymieszaj litery" data-t-aria="wymieszaj"><svg><use href="#i-tasuj"/></svg></button>
     </div>
     <div class="kolo" id="kolo"></div>
     <div class="boczne prawe">
-      <button class="okragly film" id="btn-film" aria-label="Obejrzyj reklamę za monety"><svg><use href="#i-film"/></svg><span class="znaczek zloty" id="film-nagroda">+30</span></button>
+      <button class="okragly film" id="btn-film" aria-label="Obejrzyj reklamę za monety" data-t-aria="filmZaMonety"><svg><use href="#i-film"/></svg><span class="znaczek zloty" id="film-nagroda">+30</span></button>
       <button class="okragly" id="btn-podpowiedz" aria-label="Podpowiedź"><svg><use href="#i-zarowka"/></svg><span class="znaczek zloty" id="koszt-podp">40</span></button>
     </div>
   </div>
@@ -81,7 +81,7 @@
     <p id="wygrana-opis"></p>
     <div class="kropki" id="wygrana-kropki"></div>
     <div class="nagroda" id="wygrana-nagroda"></div>
-    <button class="btn-glowny" id="btn-dalej">Dalej</button>
+    <button class="btn-glowny" id="btn-dalej" data-t="dalej">Dalej</button>
   </div>
 </div>
 
@@ -89,48 +89,49 @@
 <div class="nakladka" id="nowy-szlak">
   <div class="okno okno-szlak">
     <div class="miniatura" id="szlak-miniatura"></div>
-    <small>Nowy szlak odblokowany</small>
+    <small data-t="nowySzlak">Nowy szlak odblokowany</small>
     <h2 id="szlak-nazwa"></h2>
     <p id="szlak-opis"></p>
-    <button class="btn-glowny" id="btn-szlak">Ruszamy!</button>
+    <button class="btn-glowny" id="btn-szlak" data-t="ruszamy">Ruszamy!</button>
   </div>
 </div>
 
 <!-- Ustawienia -->
 <div class="nakladka" id="ustawienia">
   <div class="okno">
-    <h2>Ustawienia</h2>
-    <label class="przelacznik"><span>Dźwięki</span><input type="checkbox" id="u-dzwiek"><i></i></label>
-    <label class="przelacznik"><span>Wibracje</span><input type="checkbox" id="u-wibracje"><i></i></label>
-    <button class="btn-glowny" id="u-bez-reklam" hidden>Usuń reklamy</button>
-    <button class="btn-drugi" id="u-przywroc" hidden>Przywróć zakup</button>
+    <h2 data-t="ustawienia">Ustawienia</h2>
+    <label class="przelacznik"><span data-t="dzwieki">Dźwięki</span><input type="checkbox" id="u-dzwiek"><i></i></label>
+    <label class="przelacznik"><span data-t="wibracje">Wibracje</span><input type="checkbox" id="u-wibracje"><i></i></label>
+    <button class="btn-glowny" id="u-bez-reklam" data-t="usunReklamy" hidden>Usuń reklamy</button>
+    <button class="btn-drugi" id="u-przywroc" data-t="przywroc" hidden>Przywróć zakup</button>
     <p class="drobne" id="u-zakupy-info" hidden></p>
-    <button class="btn-drugi" id="u-wyglad">Wygląd liter</button>
-    <button class="btn-drugi" id="u-prywatnosc-reklam">Ustawienia prywatności reklam</button>
-    <a class="btn-drugi" id="u-polityka" target="_blank" rel="noopener">Polityka prywatności</a>
-    <p class="drobne">Słowa: słownik <a href="https://sjp.pl" target="_blank" rel="noopener">SJP.PL</a> (CC BY 4.0) i lista frekwencyjna FrequencyWords (CC BY-SA 4.0). Czcionka Nunito (SIL OFL). <span id="u-wersja"></span></p>
-    <button class="btn-glowny" id="u-zamknij">Gotowe</button>
+    <button class="btn-drugi" id="u-wyglad" data-t="wygladLiter">Wygląd liter</button>
+    <button class="btn-drugi" id="u-prywatnosc-reklam" data-t="prywatnoscReklam">Ustawienia prywatności reklam</button>
+    <a class="btn-drugi" id="u-polityka" target="_blank" rel="noopener" data-t="polityka">Polityka prywatności</a>
+    <button class="btn-drugi" id="u-jezyk">Play in English</button>
+    <p class="drobne" data-t-html="zrodla">Słowa: słownik <a href="https://sjp.pl" target="_blank" rel="noopener">SJP.PL</a> (CC BY 4.0) i lista frekwencyjna FrequencyWords (CC BY-SA 4.0). Czcionka Nunito (SIL OFL). <span id="u-wersja"></span></p>
+    <button class="btn-glowny" id="u-zamknij" data-t="gotowe">Gotowe</button>
   </div>
 </div>
 
 <!-- Wygląd liter -->
 <div class="nakladka" id="okno-motywy">
   <div class="okno">
-    <h2>Wygląd liter</h2>
+    <h2 data-t="wygladLiter">Wygląd liter</h2>
     <div class="monety" data-monety><svg><use href="#i-moneta"/></svg><span>0</span></div>
     <div class="lista-motywow" id="lista-motywow"></div>
     <p class="drobne" id="motywy-info" hidden></p>
-    <button class="btn-glowny" id="motywy-zamknij">Gotowe</button>
+    <button class="btn-glowny" id="motywy-zamknij" data-t="gotowe">Gotowe</button>
   </div>
 </div>
 
 <!-- Słoik -->
 <div class="nakladka" id="okno-sloik">
   <div class="okno">
-    <h2>Słoik słów</h2>
-    <p>Znajduj słowa, których nie ma w krzyżówce. Za każde <b id="sloik-ile">8</b> dostaniesz monety.</p>
+    <h2 data-t="sloikSlow">Słoik słów</h2>
+    <p data-t-html="sloikOpis">Znajduj słowa, których nie ma w krzyżówce. Za każde <b id="sloik-ile">8</b> dostaniesz monety.</p>
     <div class="lista-bonusow" id="lista-bonusow"></div>
-    <button class="btn-glowny" id="sloik-zamknij">Wracam do gry</button>
+    <button class="btn-glowny" id="sloik-zamknij" data-t="wracam">Wracam do gry</button>
   </div>
 </div>
 

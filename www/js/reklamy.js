@@ -1,4 +1,5 @@
 // Warstwa reklam: AdMob w aplikacji na Androida, symulacja w przeglądarce.
+import { t } from './jezyk.js';
 import { KONFIG } from './konfiguracja.js';
 import { S, zapisz } from './stan.js';
 import { natywna, wtyczka } from './natywne.js';
@@ -96,7 +97,7 @@ function symulacja() {
   return new Promise((ok) => {
     const el = document.createElement('div');
     el.className = 'reklama-sym';
-    el.innerHTML = `<div><b>Reklama testowa</b><p>W aplikacji w tym miejscu wyświetli się krótka reklama.</p><span>3</span></div>`;
+    el.innerHTML = `<div>${t('reklamaTestowa')}<span>3</span></div>`;
     document.body.append(el);
     let n = 3;
     const t = setInterval(() => {

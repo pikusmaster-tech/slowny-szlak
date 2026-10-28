@@ -9,6 +9,7 @@ import { KONFIG } from './konfiguracja.js';
 import { natywna, wtyczka } from './natywne.js';
 import { zakupyDostepne, cenaBezReklam, sprawdzZakupy, kupBezReklam, przywrocZakup } from './zakupy.js';
 import { MOTYWY, znajdzMotyw } from './motywy.js';
+import { t, nazwaSzlaku, nazwaMotywu, opisSzlaku, przetlumaczStrone, zmienJezyk, EN } from './jezyk.js';
 
 const $ = (s) => document.querySelector(s);
 const DUZE = (s) => s.toLocaleUpperCase('pl');
@@ -92,7 +93,7 @@ function zamknij(id) { $(id).classList.remove('otwarta'); }
 function logo() {
   const el = $('#logo-litery');
   el.innerHTML = '';
-  [['S', 'Ł', 'O', 'W', 'N', 'Y'], ['S', 'Z', 'L', 'A', 'K']].forEach((w, r) => {
+  t('logo').forEach((w, r) => {
     const wiersz = document.createElement('div');
     wiersz.className = 'logo-wiersz';
     w.forEach((l, i) => {
@@ -111,13 +112,13 @@ function ekranStartowy() {
   document.querySelectorAll('.nakladka.otwarta').forEach((n) => n.classList.remove('otwarta'));
   const etap = etapDlaPoziomu(S.poziom);
   ustawTlo(etap, etap.nr + 1);
-  $('#graj-poziom').textContent = `Poziom ${S.poziom}`;
-  $('#karta-szlaku').innerHTML = `<b>${etap.szlak.nazwa}</b>${etap.wEtapie - 1} z 20 poziomów<div class="pasek-postepu"><i style="width:${((etap.wEtapie - 1) / 20) * 100}%"></i></div>`;
+  $('#graj-poziom').textContent = t('poziom', S.poziom);
+  $('#karta-szlaku').innerHTML = `<b>${nazwaSzlaku(etap.szlak)}</b>${t('zPoziomow', etap.wEtapie - 1)}<div class="pasek-postepu"><i style="width:${((etap.wEtapie - 1) / 20) * 100}%"></i></div>`;
   const seria = S.ostatniaDzienna === dzisiaj() || S.ostatniaDzienna === wczoraj() ? S.seria : 0;
   $('#seria b').textContent = seria;
   const zrobione = S.ostatniaDzienna === dzisiaj();
   $('#btn-dzienna').classList.toggle('zrobione', zrobione);
-  $('#dzienna-opis').textContent = zrobione ? 'Ukończone! Wróć jutro po nowe' : seria ? `Utrzymaj serię: ${seria} ${seria === 1 ? 'dzień' : 'dni'}` : 'Nowa krzyżówka co rano, +50 monet';
+  $('#dzienna-opis').textContent = zrobione ? t('dziennaZrobiona') : seria ? t('dziennaSeria', seria) : t('dziennaNowa');
   odswiezMonety();
   pokazEkran('ekran-start');
   logo();
@@ -165,8 +166,8 @@ function wczytajPoziom(tryb) {
   zapisz();
   biezacy = { tryb, nr, dane, etap, zapis, kratki: new Map(), slowa: dane.w, bonusy: new Set(dane.b.map((i) => DANE.slownik[i])), seria: 0, ostatnie: 0, koniec: false };
   ustawTlo(etap, ziarno);
-  $('#tytul-szlaku').textContent = tryb === 'dzienna' ? 'Wyzwanie dnia' : etap.szlak.nazwa;
-  $('#tytul-nr').textContent = tryb === 'dzienna' ? dataPolska(zapis.data) : `Poziom ${nr} · ${etap.wEtapie}/20`;
+  $('#tytul-szlaku').textContent = tryb === 'dzienna' ? t('wyzwanieDnia') : nazwaSzlaku(etap.szlak);
+  $('#tytul-nr').textContent = tryb === 'dzienna' ? dataPolska(zapis.data) : t('poziomWEtapie', nr, etap.wEtapie);
   pokazEkran('ekran-gra');
   rysujSiatke();
   kolo.ustaw(dane.l);
@@ -177,13 +178,13 @@ function wczytajPoziom(tryb) {
   if (tryb !== 'dzienna' && nr === 1 && !zapis.znalezione.length) raczkaCzas = setTimeout(pokazRaczke, 900);
   if (tryb === 'dzienna' && zapis.ukonczona) {
     biezacy.koniec = true; kolo.wylaczone = true;
-    setTimeout(() => komunikat('Wróć jutro po nowe!'), 500);
+    setTimeout(() => komunikat(t('wrocJutro')), 500);
   }
 }
 
 function dataPolska(d) {
   const [y, m, dz] = d.split('-').map(Number);
-  return new Date(y, m - 1, dz).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' });
+  return new Date(y, m - 1, dz).toLocaleDateString(t('data'), { day: 'numeric', month: 'long' });
 }
 
 function rysujSiatke() {
@@ -274,7 +275,7 @@ function podglad(slowo, klasa) {
   setTimeout(() => { if (el.classList.contains(klasa)) { el.innerHTML = ''; el.className = 'podglad'; } }, 700);
 }
 
-const POCHWALY = ['Dobrze!', 'Świetnie!', 'Rewelacja!', 'Mistrzostwo!', 'Niesamowite!', 'Geniusz!'];
+const POCHWALY = t('pochwaly');
 
 function naSlowo(slowo) {
   if (!biezacy || biezacy.koniec) return;
@@ -311,7 +312,7 @@ function naSlowo(slowo) {
       S.sloik -= KONFIG.bonusowDoSloika;
       const b = $('#btn-sloik').getBoundingClientRect();
       przyznajMonety(KONFIG.nagrodaZaSloik);
-      setTimeout(() => { komunikat('Pełny słoik!'); animujMonety(KONFIG.nagrodaZaSloik, { x: b.left + b.width / 2, y: b.top }); }, 650);
+      setTimeout(() => { komunikat(t('pelnySloik')); animujMonety(KONFIG.nagrodaZaSloik, { x: b.left + b.width / 2, y: b.top }); }, 650);
     }
     zapisz();
   } else if (biezacy.bonusy.has(slowo)) {
@@ -353,7 +354,7 @@ function odswiezPodpowiedz() {
   const znaczek = $('#koszt-podp');
   znaczek.style.display = tryb === 'darmo' ? 'none' : '';
   znaczek.textContent = tryb === 'monety' ? KONFIG.kosztPodpowiedzi : '▶';
-  $('#btn-podpowiedz').setAttribute('aria-label', tryb === 'reklama' ? 'Podpowiedź za reklamę' : 'Podpowiedź');
+  $('#btn-podpowiedz').setAttribute('aria-label', tryb === 'reklama' ? t('podpowiedzReklama') : t('podpowiedz'));
 }
 
 let podpowiedzWToku = false;
@@ -368,7 +369,7 @@ async function podpowiedz() {
     const ok = await nagradzana();
     podpowiedzWToku = false;
     if (biezacy !== poziom || poziom.koniec) return;
-    if (!ok) { komunikat('Reklama niedostępna'); return; }
+    if (!ok) { komunikat(t('reklamaNiedostepna')); return; }
   }
   const c = nastepnaPodpowiedz();
   if (!c) return;
@@ -388,7 +389,7 @@ async function podpowiedz() {
 }
 
 function zaMalo() {
-  komunikat('Za mało monet');
+  komunikat(t('zaMaloMonet'));
   const b = $('#btn-film');
   b.classList.remove('pelny'); void b.offsetWidth; b.classList.add('pelny');
 }
@@ -400,7 +401,7 @@ async function film() {
   const ok = await nagradzana();
   b.classList.remove('wylaczony');
   if (ok) { const r = b.getBoundingClientRect(); dodajMonety(KONFIG.nagrodaZaReklame, { x: r.left + r.width / 2, y: r.top }); }
-  else komunikat('Reklama niedostępna');
+  else komunikat(t('reklamaNiedostepna'));
 }
 
 // ---------- Wygrana ----------
@@ -443,12 +444,12 @@ function swietuj(poziom, nagroda) {
   konfetti();
   const { tryb, nr, etap } = poziom;
   if (tryb === 'dzienna') {
-    $('#wygrana-tytul').textContent = 'Wyzwanie ukończone!';
-    $('#wygrana-opis').textContent = `Seria: ${S.seria} ${S.seria === 1 ? 'dzień' : 'dni'} z rzędu. Jutro czeka nowa krzyżówka.`;
+    $('#wygrana-tytul').textContent = t('wyzwanieUkonczone');
+    $('#wygrana-opis').textContent = t('seriaOpis', S.seria);
     $('#wygrana-kropki').innerHTML = '';
   } else {
-    $('#wygrana-tytul').textContent = ['Brawo!', 'Super!', 'Pięknie!', 'Ekstra!', 'Wspaniale!'][nr % 5];
-    $('#wygrana-opis').textContent = etap.wEtapie === 20 ? `Szlak ${etap.szlak.nazwa} ukończony!` : `${etap.szlak.nazwa}: poziom ${etap.wEtapie} z 20`;
+    $('#wygrana-tytul').textContent = t('brawa')[nr % 5];
+    $('#wygrana-opis').textContent = etap.wEtapie === 20 ? t('szlakUkonczony', nazwaSzlaku(etap.szlak)) : t('szlakPoziom', nazwaSzlaku(etap.szlak), etap.wEtapie);
     $('#wygrana-kropki').innerHTML = Array.from({ length: 20 }, (_, i) => `<i class="${i < etap.wEtapie - 1 ? 'z' : i === etap.wEtapie - 1 ? 'teraz' : ''}"></i>`).join('');
   }
   $('#wygrana-nagroda').innerHTML = `<span><svg><use href="#i-moneta"/></svg>+${nagroda}</span>`;
@@ -474,8 +475,8 @@ async function dalej() {
   if (etap.wEtapie === 20) {
     const nowy = etapDlaPoziomu(nr + 1);
     $('#szlak-miniatura').innerHTML = rysujKrajobraz(nowy, nowy.nr + 1).replace('xMidYMax slice', 'xMidYMid slice');
-    $('#szlak-nazwa').textContent = nowy.szlak.nazwa;
-    $('#szlak-opis').textContent = OPISY[nowy.szlak.id] || '';
+    $('#szlak-nazwa').textContent = nazwaSzlaku(nowy.szlak);
+    $('#szlak-opis').textContent = opisSzlaku(nowy.szlak.id) || OPISY[nowy.szlak.id] || '';
     otworz('#nowy-szlak');
     return;
   }
@@ -518,12 +519,12 @@ function pokazRaczke() {
     raczkaKlatka = requestAnimationFrame(krok);
   };
   raczkaKlatka = requestAnimationFrame(krok);
-  komunikat('Przeciągnij po literach');
+  komunikat(t('przeciagnij'));
 }
 
 // ---------- Wygląd liter ----------
 // Motyw zmienia kolory kafelków (zmienne --kafel-* w styl.css). Kupujemy go za monety z gry.
-const LITERY_PODGLADU = ['S', 'Ł', 'O'];
+const LITERY_PODGLADU = t('literyPodgladu');
 
 function ustawMotyw() {
   document.body.dataset.motyw = znajdzMotyw(S.motyw).id;
@@ -538,9 +539,9 @@ function pokazInfoMotywu(tekst) {
 function odswiezMotywy() {
   $('#lista-motywow').innerHTML = MOTYWY.map((m) => {
     const wybrany = S.motyw === m.id;
-    const stan = wybrany ? 'W użyciu' : S.kupioneMotywy.includes(m.id) ? 'Wybierz' : `${m.cena} monet`;
+    const stan = wybrany ? t('wUzyciu') : S.kupioneMotywy.includes(m.id) ? t('wybierz') : t('monet', m.cena);
     const kafle = LITERY_PODGLADU.map((l) => `<span class="kafel-podglad">${l}</span>`).join('');
-    return `<button class="motyw${wybrany ? ' wybrany' : ''}" data-motyw-id="${m.id}"><span class="kafle" data-motyw="${m.id}">${kafle}</span><span>${m.nazwa}</span><small>${stan}</small></button>`;
+    return `<button class="motyw${wybrany ? ' wybrany' : ''}" data-motyw-id="${m.id}"><span class="kafle" data-motyw="${m.id}">${kafle}</span><span>${nazwaMotywu(m)}</span><small>${stan}</small></button>`;
   }).join('');
 }
 
@@ -563,7 +564,7 @@ function klikMotyw(id) {
     // Sprawdzamy saldo bez monet, które dopiero lecą do licznika.
     if (Math.max(0, S.monety - oczekujace) < m.cena) {
       Dzwiek.blad();
-      pokazInfoMotywu(`Za mało monet. ${m.nazwa} kosztuje ${m.cena}.`);
+      pokazInfoMotywu(t('motywZaDrogi', nazwaMotywu(m), m.cena));
       return;
     }
     S.monety -= m.cena;
@@ -599,14 +600,14 @@ function podepnij() {
   $('#btn-sloik').onclick = () => {
     const z = biezacy?.zapis;
     $('#sloik-ile').textContent = KONFIG.bonusowDoSloika;
-    $('#lista-bonusow').innerHTML = z?.bonusy.length ? z.bonusy.map((b) => `<span>${DUZE(b)}</span>`).join('') : '<em>Na tym poziomie jeszcze nic.</em>';
+    $('#lista-bonusow').innerHTML = z?.bonusy.length ? z.bonusy.map((b) => `<span>${DUZE(b)}</span>`).join('') : `<em>${t('pustySloik')}</em>`;
     otworz('#okno-sloik');
   };
   $('#sloik-zamknij').onclick = () => zamknij('#okno-sloik');
   $('#btn-ustawienia').onclick = () => {
     $('#u-dzwiek').checked = S.dzwiek; $('#u-wibracje').checked = S.wibracje;
-    $('#u-polityka').href = KONFIG.politykaPrywatnosci;
-    $('#u-wersja').textContent = 'Wersja ' + KONFIG.wersja + '.';
+    $('#u-polityka').href = EN ? KONFIG.politykaPrywatnosciEn : KONFIG.politykaPrywatnosci;
+    $('#u-wersja').textContent = t('wersja', KONFIG.wersja);
     $('#u-prywatnosc-reklam').style.display = natywna() ? '' : 'none';
     $('#u-zakupy-info').hidden = true;
     odswiezZakupy();
@@ -621,6 +622,8 @@ function podepnij() {
   $('#lista-motywow').onclick = (e) => { const b = e.target.closest('[data-motyw-id]'); if (b) klikMotyw(b.dataset.motywId); };
   $('#motywy-zamknij').onclick = zamknijMotywy;
   $('#u-zamknij').onclick = () => zamknij('#ustawienia');
+  $('#u-jezyk').textContent = t('jezykPrzycisk');
+  $('#u-jezyk').onclick = () => zmienJezyk(EN ? 'pl' : 'en');
   // Przycisk "wstecz" na Androidzie
   wtyczka('App')?.addListener('backButton', () => {
     const otwarta = document.querySelector('.nakladka.otwarta');
@@ -647,11 +650,11 @@ async function odswiezZakupy() {
   $('#u-przywroc').hidden = !dostepne || S.bezReklam;
   kup.hidden = true;
   if (!dostepne) { pokazInfoZakupu(''); return; }
-  if (S.bezReklam) { pokazInfoZakupu('Reklamy są usunięte. Dziękujemy!'); return; }
+  if (S.bezReklam) { pokazInfoZakupu(t('reklamyUsuniete')); return; }
   pokazInfoZakupu('');
   const cena = await cenaBezReklam();
   if (!cena) return;
-  kup.textContent = `Usuń reklamy · ${cena}`;
+  kup.textContent = t('usunReklamyCena', cena);
   kup.hidden = false;
 }
 
@@ -661,9 +664,9 @@ async function kupTeraz() {
   const wynik = await kupBezReklam();
   kup.disabled = false;
   const tekst = {
-    ok: 'Dziękujemy! Reklamy usunięte, a podpowiedzi są bez limitu.',
-    oczekuje: 'Zakup czeka na potwierdzenie w Google Play.',
-    blad: 'Zakup nie został dokończony. Spróbuj ponownie.',
+    ok: t('zakupOk'),
+    oczekuje: t('zakupOczekuje'),
+    blad: t('zakupBlad'),
   }[wynik];
   await odswiezZakupy();
   pokazInfoZakupu(tekst);
@@ -673,7 +676,7 @@ async function kupTeraz() {
 async function przywrocTeraz() {
   const ok = await przywrocZakup();
   await odswiezZakupy();
-  pokazInfoZakupu(ok ? 'Zakup przywrócony. Reklamy są usunięte.' : 'Nie znaleziono zakupu na tym koncie Google.');
+  pokazInfoZakupu(ok ? t('zakupPrzywrocony') : t('zakupBrak'));
   odswiezPodpowiedz();
 }
 
@@ -684,11 +687,12 @@ function wyjdzZPoziomu() {
 
 async function main() {
   try {
+    przetlumaczStrone();
     podepnij();
     ekranStartowy();
-    const odp = await fetch('poziomy.json');
+    const odp = await fetch(t('plikPoziomow'));
     DANE = await odp.json();
-    window.__gra = { S, DANE, wczytajPoziom, naSlowo: (s) => naSlowo(s), biezacy: () => biezacy };
+    window.__gra = { S, DANE, zapisz, wczytajPoziom, naSlowo: (s) => naSlowo(s), biezacy: () => biezacy };
   } finally {
     wtyczka('SplashScreen')?.hide();
   }
